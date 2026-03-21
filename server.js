@@ -818,7 +818,7 @@ async function startServer() {
     }
     try {
         await connectDatabase();
-        server.listen(config.server.port, () => {
+        server.listen(config.server.port, '0.0.0.0', () => {
             logger.info(`🚀 3AM Channel running at http://localhost:${config.server.port}`);
             logger.info(`📊 Environment: ${config.env}`);
             if (config.devOverride && config.isDevelopment) {
