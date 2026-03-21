@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="description" content="A safe space for nighttime thoughts. Open only between 3:00 AM and 6:00 AM.">
+    <meta name="keywords" content="3am, nighttime, anonymous, thoughts, community, insomnia">
+
+    <!-- PWA / Apple -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="3AM Channel">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect width='180' height='180' fill='%230a0a0f' rx='40'/><circle cx='90' cy='90' r='72' fill='%230a0a0f'/><path d='M54 90 Q90 54 126 90 Q90 126 54 90' fill='%232d2d44'/><circle cx='63' cy='81' r='5.4' fill='%233d3d5c' opacity='0.7'/><circle cx='117' cy='99' r='3.6' fill='%233d3d5c' opacity='0.7'/></svg>">
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="The 3AM Channel">
+    <meta property="og:description" content="A hidden space that opens at 3:00 AM. Share what you can only say when the world is asleep.">
+    <meta property="og:image" content="/og-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://3amchannel.com">
+    <meta property="og:site_name" content="The 3AM Channel">
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="The 3AM Channel">
+    <meta name="twitter:description" content="A hidden space that opens at 3:00 AM. Say what you can't say in daylight.">
+    <meta name="twitter:image" content="/og-image.png">
+
+    <meta name="referrer" content="no-referrer">
+
+    <title>The 3AM Channel</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <script src="/socket.io/socket.io.js" defer></script>
+    <!-- html2canvas for post sharing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+</head>
+
+<body>
+
+    <!-- ═══════════════════════════════════════
+         ONBOARDING OVERLAY (shown on first visit)
+    ════════════════════════════════════════ -->
+    <div id="onboarding-overlay" class="onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to The 3AM Channel" hidden>
+        <button id="onboarding-skip" class="onboarding-skip" aria-label="Skip introduction">skip</button>
+
+        <div class="onboarding-slides" id="onboarding-slides">
+            <!-- Slide 1 -->
+            <div class="onboarding-slide" data-slide="0">
+                <div class="onboarding-icon">🌙</div>
+                <h2 class="onboarding-title">welcome to 3am</h2>
+                <p class="onboarding-body">this place only exists between 3 and 6 in the morning</p>
+            </div>
+            <!-- Slide 2 -->
+            <div class="onboarding-slide" data-slide="1">
+                <div class="onboarding-icon">👁</div>
+                <h2 class="onboarding-title">no names. no faces. no history.</h2>
+                <p class="onboarding-body">everything you say disappears at 6am. forever.</p>
+            </div>
+            <!-- Slide 3 -->
+            <div class="onboarding-slide" data-slide="2">
+                <div class="onboarding-icon">🤫</div>
+                <h2 class="onboarding-title">be honest. be kind. be weird.</h2>
+                <p class="onboarding-body">this is the only place no one is watching.</p>
+            </div>
+        </div>
+
+        <!-- Dot indicators -->
+        <div class="onboarding-dots" aria-hidden="true">
+            <span class="onboarding-dot active" data-dot="0"></span>
+            <span class="onboarding-dot" data-dot="1"></span>
+            <span class="onboarding-dot" data-dot="2"></span>
+        </div>
+
+        <!-- Navigation -->
+        <div class="onboarding-nav">
+            <button id="onboarding-prev" class="onboarding-arrow" aria-label="Previous slide" hidden>←</button>
+            <button id="onboarding-next" class="onboarding-arrow" aria-label="Next slide">→</button>
+            <button id="onboarding-enter" class="onboarding-enter" aria-label="Enter the channel" hidden>enter</button>
+        </div>
+    </div>
+
+    <!-- Starfield background (canvas, always behind everything) -->
+    <canvas id="starfield" class="starfield-canvas" aria-hidden="true"></canvas>
+    <!-- Film grain overlay -->
+    <div class="grain-overlay" aria-hidden="true"></div>
+
+    <div id="app" role="main">
+
+        <!-- ═══════════════════════════════════════
+             CLOSED SCREEN
+        ════════════════════════════════════════ -->
+        <div id="closed-screen" class="screen active" role="region" aria-label="Channel closed">
+            <div class="screen-content">
+                <div class="moon-icon" role="img" aria-label="Moon icon" tabindex="0" title="The 3AM Channel">
+                    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <circle cx="50" cy="50" r="40" fill="#1a1a2e" opacity="0.5" />
+                        <path d="M30 50 Q50 30 70 50 Q50 70 30 50" fill="#2d2d44" opacity="0.8" />
+                        <circle cx="35" cy="45" r="3" fill="#3d3d5c" opacity="0.6" />
+                        <circle cx="65" cy="55" r="2" fill="#3d3d5c" opacity="0.6" />
+                    </svg>
+                </div>
+                <h1 class="app-title">The 3AM Channel</h1>
+                <p class="closed-message">The channel is closed right now.</p>
+                <div class="status-badge closed">
+                    <span class="status-dot" aria-hidden="true"></span>
+                    <span>Closed until tonight</span>
+                </div>
+                <div class="next-opening" aria-live="polite">
+                    <p>Next opening in</p>
+                    <div id="countdown" class="countdown" aria-label="Time until opening" role="timer">--:--:--</div>
+                </div>
+                <div class="hours-info">
+                    <p>We open between 3:00 AM – 6:00 AM</p>
+                    <p class="timezone-info">Your time zone: <span id="timezone-display">Detecting...</span></p>
+                </div>
+                <div class="comfort-message" role="complementary">
+                    "Whatever you're going through, this space will be here for you when the world gets quiet."
+                </div>
+                <button id="bypass-btn" class="dev-bypass-btn" aria-label="Bypass time check (dev only)">
+                    Bypass Time Check (Dev Only)
+                </button>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             OPENING SOON SCREEN
+        ════════════════════════════════════════ -->
+        <div id="opening-screen" class="screen" role="region" aria-label="Channel opening soon">
+            <div class="screen-content">
+                <div class="opening-icon" aria-hidden="true">
+                    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50" cy="50" r="45" stroke="#4a4a6a" stroke-width="1" fill="none" opacity="0.3" />
+                        <circle cx="50" cy="50" r="35" stroke="#5a5a7a" stroke-width="1" fill="none" opacity="0.5" />
+                        <circle cx="50" cy="50" r="25" fill="#2d2d44" opacity="0.7" />
+                    </svg>
+                </div>
+                <h1 class="app-title">The 3AM Channel</h1>
+                <p class="opening-message">Opening soon...</p>
+                <div class="status-badge opening">
+                    <span class="status-dot pulse" aria-hidden="true"></span>
+                    <span>Opening in <span id="minutes-until" aria-live="polite">--</span> minutes</span>
+                </div>
+                <div class="time-reminder">
+                    <p>Get ready. Take a breath.</p>
+                    <p class="sub-reminder">We'll be here when the clock turns.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════
+             OPEN SCREEN
+        ════════════════════════════════════════ -->
+        <div id="open-screen" class="screen" role="region" aria-label="Channel open">
+
+            <header class="app-header">
+                <div class="header-left">
+                    <h1 class="app-title small">The 3AM Channel</h1>
+                    <div id="live-indicator" class="live-indicator" aria-live="polite" aria-label="Live connection status">
+                        <span class="live-dot" aria-hidden="true"></span>
+                        <span class="live-text">Live</span>
+                    </div>
+                    <div id="active-users" class="active-users" aria-live="polite">
+                        <span id="user-count-value">0</span> awake
+                    </div>
+                </div>
+                <div class="header-right">
+                    <!-- Notification bell -->
+                    <button id="notif-bell" class="notif-bell" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
+                        <span class="notif-bell-icon" aria-hidden="true">🔔</span>
+                        <span id="notif-badge" class="notif-badge" aria-live="polite" hidden>0</span>
+                    </button>
+                    <div class="status-badge open">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <span>Open</span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="main-content">
+
+                <!-- Pull-to-refresh indicator (mobile) -->
+                <div id="ptr-indicator" class="ptr-indicator" aria-hidden="true">
+                    <span class="ptr-moon">🌙</span>
+                    <span id="ptr-label" class="ptr-label">pull to refresh</span>
+                </div>
+
+                <!-- Typing indicator -->
+                <div id="typing-indicator" class="typing-indicator" aria-live="polite" aria-atomic="true" hidden>
+                    <span class="typing-dots"><span></span><span></span><span></span></span>
+                    <span id="typing-text" class="typing-text">someone is awake and typing...</span>
+                </div>
+
+                <!-- Create Post -->
+                <section class="create-post-section" aria-label="Share a thought">
+                    <div class="post-input-wrapper">
+                        <textarea
+                            id="post-input"
+                            placeholder="say what you can only say at 3am..."
+                            rows="3"
+                            aria-label="Post content"
+                            aria-describedby="char-count"
+                        ></textarea>
+
+                        <!-- Mood Picker -->
+                        <div id="mood-picker" class="mood-picker" role="group" aria-label="Pick a mood (optional)">
+                            <!-- Populated by app.js -->
+                        </div>
+
+                        <div class="post-options">
+                            <label class="anonymous-toggle">
+                                <input type="checkbox" id="anonymous-check" checked aria-label="Post anonymously">
+                                <span class="toggle-label">Anonymous</span>
+                            </label>
+                            <div class="post-actions-right">
+                                <span id="char-count" class="char-count" aria-live="polite"></span>
+                                <button id="post-button" class="post-btn" disabled aria-label="Share post">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                        <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13" />
+                                    </svg>
+                                    Share
+                                </button>
+                            </div>
+                        </div>
+                        <p id="posting-as-preview" class="posting-as-preview" aria-live="polite"></p>
+                    </div>
+                </section>
+
+                <!-- Feed -->
+                <section class="feed-section" aria-label="Tonight's posts">
+                    <div class="feed-header">
+                        <h2>Tonight</h2>
+                        <span id="post-count" class="post-count" aria-live="polite">0 posts</span>
+                    </div>
+
+                    <!-- Mood filter bar -->
+                    <div id="mood-filter-bar" class="mood-filter-bar" role="group" aria-label="Filter posts by mood"></div>
+
+                    <!-- "New posts" floating pill -->
+                    <div id="new-posts-pill" class="new-posts-pill" aria-live="polite" role="status" hidden>
+                        <span id="new-posts-pill-text">↑ new posts</span>
+                    </div>
+
+                    <div id="feed-loading" class="feed-loading" style="display:none;" aria-label="Loading posts" role="status">
+                        <div class="loading-spinner"></div>
+                        <span>Loading...</span>
+                    </div>
+
+                    <div id="feed" class="feed" role="feed" aria-label="Post feed"></div>
+
+                    <div id="empty-feed" class="empty-feed" role="status">
+                        <div class="empty-icon" aria-hidden="true">
+                            <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="30" cy="30" r="25" stroke="#3d3d5c" stroke-width="1" fill="none" opacity="0.5" />
+                                <circle cx="30" cy="30" r="8" fill="#3d3d5c" opacity="0.5" />
+                            </svg>
+                        </div>
+                        <p>Be the first to share tonight.</p>
+                        <p class="empty-sub">Sometimes the hardest part is starting.</p>
+                    </div>
+
+                    <!-- Desktop refresh button (below feed) -->
+                    <button id="desktop-refresh-btn" class="desktop-refresh-btn" aria-label="Refresh feed">
+                        ↻ refresh
+                    </button>
+                </section>
+            </main>
+
+            <!-- Exit message overlay -->
+            <div id="exit-message" class="exit-message" aria-live="polite" role="status">
+                <p class="exit-main">it's gone.</p>
+                <p class="exit-sub">see you at 3.</p>
+            </div>
+
+            <footer class="app-footer">
+                <div class="time-info">
+                    <span class="current-time" id="current-time" aria-live="polite" aria-label="Current time">--:--</span>
+                    <span class="time-remaining" id="time-remaining" aria-live="polite">-- minutes remaining</span>
+                </div>
+            </footer>
+        </div>
+
+    </div><!-- /#app -->
+
+    <!-- Ghost Post overlay -->
+    <div id="ghost-overlay" class="ghost-overlay" role="dialog" aria-modal="true" aria-label="A message from last night">
+        <div class="ghost-inner">
+            <p class="ghost-eyebrow">someone said this once. they're gone now.</p>
+            <blockquote id="ghost-text" class="ghost-text"></blockquote>
+            <p id="ghost-mood" class="ghost-mood" style="display:none"></p>
+            <p class="ghost-dismiss">tap anywhere to continue</p>
+        </div>
+    </div>
+
+    <!-- Notification Drawer -->
+    <div id="notif-drawer" class="notif-drawer" role="dialog" aria-modal="true" aria-label="Your notifications" hidden>
+        <div class="notif-drawer-header">
+            <span class="notif-drawer-title">whispers on your posts</span>
+            <button id="notif-drawer-close" class="notif-drawer-close" aria-label="Close notifications">✕</button>
+        </div>
+        <div id="notif-list" class="notif-list" role="list"></div>
+        <div id="notif-empty" class="notif-empty" hidden>
+            <p>nothing yet.</p>
+            <p class="notif-empty-sub">when someone whispers on your post, you'll see it here.</p>
+        </div>
+    </div>
+    <div id="notif-backdrop" class="notif-backdrop" hidden aria-hidden="true"></div>
+
+    <!-- Report reason picker (reused via JS positioning) -->
+    <div id="report-picker" class="report-picker" role="dialog" aria-label="Report reason" hidden>
+        <p class="report-picker-label">why are you reporting this?</p>
+        <div class="report-picker-options">
+            <button class="report-reason-btn" data-reason="offensive">offensive</button>
+            <button class="report-reason-btn" data-reason="spam">spam</button>
+            <button class="report-reason-btn" data-reason="harassment">harassment</button>
+            <button class="report-reason-btn" data-reason="other">other</button>
+        </div>
+        <button id="report-picker-cancel" class="report-picker-cancel">cancel</button>
+    </div>
+    <div id="report-backdrop" class="report-backdrop" hidden aria-hidden="true"></div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast" role="alert" aria-live="assertive"></div>
+
+    <!-- Dev bootstrap: sets window.__DEV_OVERRIDE synchronously before app.js runs.
+         Must NOT be deferred — has to execute before the IIFE in app.js reads it. -->
+    <script src="/dev-config.js"></script>
+    <script src="app.js" defer></script>
+</body>
+
+</html>

@@ -1,0 +1,13 @@
+# The 3AM Channel
+# We want to be found — index everything.
+
+User-agent: *
+Allow: /
+
+# Don't index API endpoints or health checks
+Disallow: /api/
+Disallow: /health
+Disallow: /ready
+Disallow: /dev/
+
+Sitemap: https://3amchannel.com/sitemap.xml

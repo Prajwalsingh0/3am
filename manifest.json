@@ -1,0 +1,39 @@
+{
+    "name": "The 3AM Channel",
+    "short_name": "3AM",
+    "description": "A hidden space that opens at 3:00 AM. Say what you can only say when the world is asleep.",
+    "start_url": "/",
+    "id": "/",
+    "display": "standalone",
+    "display_override": ["standalone", "fullscreen"],
+    "background_color": "#0a0a0f",
+    "theme_color": "#0a0a0f",
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "lang": "en",
+    "categories": ["social", "lifestyle"],
+    "prefer_related_applications": false,
+    "icons": [
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%230a0a0f' rx='44'/><circle cx='96' cy='96' r='77' fill='%230a0a0f'/><path d='M58 96 Q96 58 134 96 Q96 134 58 96' fill='%232d2d44'/><circle cx='67' cy='87' r='5.8' fill='%233d3d5c' opacity='0.7'/><circle cx='125' cy='105' r='3.8' fill='%233d3d5c' opacity='0.7'/></svg>",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any"
+        },
+        {
+            "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%230a0a0f' rx='116'/><circle cx='256' cy='256' r='206' fill='%230a0a0f'/><path d='M154 256 Q256 154 358 256 Q256 358 154 256' fill='%232d2d44'/><circle cx='179' cy='231' r='15' fill='%233d3d5c' opacity='0.7'/><circle cx='333' cy='281' r='10' fill='%233d3d5c' opacity='0.7'/></svg>",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Open Channel",
+            "short_name": "Open",
+            "description": "Go to the channel",
+            "url": "/",
+            "icons": [{"src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect width='96' height='96' fill='%230a0a0f' rx='20'/><path d='M29 48 Q48 29 67 48 Q48 67 29 48' fill='%232d2d44'/></svg>", "sizes": "96x96"}]
+        }
+    ]
+}
