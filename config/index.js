@@ -107,8 +107,6 @@ module.exports = {
     database: {
         uri: env.MONGODB_URI || null,
         options: {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             maxPoolSize: 10,
             minPoolSize: 2,
             serverSelectionTimeoutMS: 10000,
