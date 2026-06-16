@@ -57,3 +57,6 @@ logs/
 *.pem
 .pnp.*
 .yarn/
+
+# Local persistent development database
+local_db.json

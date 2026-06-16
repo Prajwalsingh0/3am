@@ -1,20 +1,17 @@
 const Joi = require('joi');
 require('dotenv').config();
 
-// Peek at DEV_OVERRIDE before full schema validation so we can decide
-// whether MONGODB_URI is required. In dev with DEV_OVERRIDE=true, MongoDB
-// is optional — the server runs on in-memory storage so developers can
-// test the full UI without an Atlas account.
+// MongoDB is always optional in development — the server falls back to in-memory
+// storage so developers can test the full UI (including the real time-gated
+// closed screen) without an Atlas account.
 //
-// IMPORTANT: When NODE_ENV is 'development' (or not set), DEV_OVERRIDE
-// defaults to TRUE so the server just works out of the box without any
-// .env configuration. Set DEV_OVERRIDE=false explicitly to enforce the
-// time window in development.
+// DEV_OVERRIDE only controls the time gate (1AM–6AM window bypass):
+//   DEV_OVERRIDE=false → real time gate enforced, closed screen with countdown
+//   DEV_OVERRIDE=true  → time gate bypassed, feed always accessible
 const _isDev = !process.env.NODE_ENV || process.env.NODE_ENV === 'development';
-const _isDevOverride = process.env.DEV_OVERRIDE !== undefined
-    ? process.env.DEV_OVERRIDE === 'true'
-    : _isDev; // default: true in dev, false in production
-const _mongoOptional = _isDevOverride && _isDev;
+const _isTest = process.env.NODE_ENV === 'test';
+const _isDevOverride = process.env.DEV_OVERRIDE === 'true';
+const _mongoOptional = _isDev || _isTest;
 
 // Environment validation schema
 const envSchema = Joi.object({
@@ -28,7 +25,6 @@ const envSchema = Joi.object({
 
     // MongoDB Atlas connection string.
     // Required in production. Optional in development when DEV_OVERRIDE=true.
-    // Format: mongodb+srv://<user>:<pass>@cluster0.xxxxx.mongodb.net/3am?retryWrites=true&w=majority
     MONGODB_URI: _mongoOptional
         ? Joi.string().uri({ scheme: ['mongodb', 'mongodb+srv'] }).optional()
         : Joi.string().uri({ scheme: ['mongodb', 'mongodb+srv'] }).required(),
@@ -69,7 +65,13 @@ const envSchema = Joi.object({
 
     DEV_OVERRIDE: Joi.boolean()
         .truthy('true').falsy('false')
-        .default(_isDev) // true in development, false in production
+        .default(false),
+
+    SESSION_SECRET: Joi.string()
+        .default('default-3am-secret-key-change-in-production'),
+
+    TRUST_PROXY: Joi.string()
+        .default('loopback')
 }).unknown();
 
 // Validate environment
@@ -82,16 +84,14 @@ if (error) {
         console.error('\u2501'.repeat(51));
         console.error('\u274C  MONGODB_URI is missing from your .env file.');
         console.error('    See README.md \u2192 "MongoDB Atlas Setup" to get started.');
-        console.error('    Tip: in development, DEV_OVERRIDE defaults to true so you');
-        console.error('    can run without MongoDB. Just start with: npm run dev');
+        console.error('    Tip: in development, set DEV_OVERRIDE=true in your .env');
+        console.error('    to run without MongoDB using in-memory fallback.');
         console.error('\u2501'.repeat(51));
         console.error('');
     }
     throw new Error('Config validation error: ' + error.message);
 }
 
-// Resolve final devOverride — also trust the pre-schema peek value (_isDevOverride)
-// so in-memory path is consistent even if Joi coercion differs.
 const devOverride = env.DEV_OVERRIDE === true || _isDevOverride;
 
 module.exports = {
@@ -101,7 +101,8 @@ module.exports = {
     isTest: env.NODE_ENV === 'test',
 
     server: {
-        port: env.PORT
+        port: env.PORT,
+        trustProxy: env.TRUST_PROXY
     },
 
     database: {
@@ -111,7 +112,7 @@ module.exports = {
             minPoolSize: 2,
             serverSelectionTimeoutMS: 10000,
             socketTimeoutMS: 45000,
-            heartbeatFrequencyMS: 10000,
+            heartbeatFrequencyMS: 10000
         }
     },
 
@@ -138,7 +139,7 @@ module.exports = {
     },
 
     channel: {
-        openHour: 3,
+        openHour: 1,
         openMinute: 0,
         closeHour: 6,
         closeMinute: 0
@@ -149,6 +150,7 @@ module.exports = {
     },
 
     devOverride,
+    sessionSecret: env.SESSION_SECRET,
 
     sentry: {
         dsn: env.SENTRY_DSN

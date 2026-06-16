@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#0a0a0f">
-    <meta name="description" content="A safe space for nighttime thoughts. Open only between 3:00 AM and 6:00 AM.">
+    <meta name="theme-color" content="#08090a">
+    <meta name="description" content="A safe space for nighttime thoughts. Open only between 1:00 AM and 6:00 AM.">
     <meta name="keywords" content="3am, nighttime, anonymous, thoughts, community, insomnia">
 
     <!-- PWA / Apple -->
@@ -17,7 +17,7 @@
     <!-- Open Graph -->
     <meta property="og:type" content="website">
     <meta property="og:title" content="The 3AM Channel">
-    <meta property="og:description" content="A hidden space that opens at 3:00 AM. Share what you can only say when the world is asleep.">
+    <meta property="og:description" content="A hidden space that opens at 1:00 AM. Share what you can only say when the world is asleep.">
     <meta property="og:image" content="/og-image.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -27,17 +27,20 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="The 3AM Channel">
-    <meta name="twitter:description" content="A hidden space that opens at 3:00 AM. Say what you can't say in daylight.">
+    <meta name="twitter:description" content="A hidden space that opens at 1:00 AM. Say what you can't say in daylight.">
     <meta name="twitter:image" content="/og-image.png">
 
     <meta name="referrer" content="no-referrer">
 
     <title>The 3AM Channel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <script src="/socket.io/socket.io.js" defer></script>
     <!-- html2canvas for post sharing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+    <script src="/html2canvas.min.js" defer></script>
 </head>
 
 <body>
@@ -53,7 +56,7 @@
             <div class="onboarding-slide" data-slide="0">
                 <div class="onboarding-icon">🌙</div>
                 <h2 class="onboarding-title">welcome to 3am</h2>
-                <p class="onboarding-body">this place only exists between 3 and 6 in the morning</p>
+                <p class="onboarding-body">this place only exists between 1 and 6 in the morning</p>
             </div>
             <!-- Slide 2 -->
             <div class="onboarding-slide" data-slide="1">
@@ -115,7 +118,7 @@
                     <div id="countdown" class="countdown" aria-label="Time until opening" role="timer">--:--:--</div>
                 </div>
                 <div class="hours-info">
-                    <p>We open between 3:00 AM – 6:00 AM</p>
+                    <p>We open between 1:00 AM – 6:00 AM</p>
                     <p class="timezone-info">Your time zone: <span id="timezone-display">Detecting...</span></p>
                 </div>
                 <div class="comfort-message" role="complementary">

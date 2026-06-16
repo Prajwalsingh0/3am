@@ -1,11 +1,11 @@
 {
   "name": "3am-channel",
   "version": "1.0.0",
-  "description": "A safe space for nighttime thoughts. Open only between 3:00 AM and 6:00 AM.",
+  "description": "A safe space for nighttime thoughts. Open only between 1:00 AM and 6:00 AM.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "NODE_ENV=development nodemon server.js",
+    "dev": "set NODE_ENV=development&& nodemon server.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "test:e2e": "playwright test",
@@ -35,7 +35,7 @@
     "joi": "^17.11.0",
     "mongoose": "^8.9.5",
     "morgan": "^1.10.0",
-    "node-cron": "^3.0.3",
+    "node-cron": "^4.2.1",
     "socket.io": "^4.8.3",
     "uuid": "^11.0.6",
     "winston": "^3.11.0",

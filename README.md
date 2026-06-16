@@ -6,7 +6,7 @@
 
 ## What is this?
 
-The 3AM Channel is an anonymous social space that opens at 3:00 AM and disappears at 6:00 AM — every single night. No accounts. No usernames. No history. Just people awake at the same strange hour, saying things they can only say when the world is asleep.
+The 3AM Channel is an anonymous social space that opens at 1:00 AM and disappears at 6:00 AM — every single night. No accounts. No usernames. No history. Just people awake at the same strange hour, saying things they can only say when the world is asleep.
 
 Everything you post is gone by morning. That's the point.
 
@@ -14,7 +14,7 @@ Everything you post is gone by morning. That's the point.
 
 ## How it works
 
-- **Opens at 3:00 AM** in your local timezone, closes at 6:00 AM
+- **Opens at 1:00 AM** in your local timezone, closes at 6:00 AM
 - **All posts are deleted at 6AM**, permanently, every night
 - **Fully anonymous** — no accounts, no tracking, no persistent identity
 - One post survives each night: the most-reacted one gets "kept" as a ghost post that haunts the next session

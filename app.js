@@ -13,7 +13,7 @@
     // Configuration
     // ========================================
     const CONFIG = {
-        OPEN_HOUR: 3,
+        OPEN_HOUR: 1,
         OPEN_MINUTE: 0,
         CLOSE_HOUR: 6,
         CLOSE_MINUTE: 0,
@@ -21,12 +21,12 @@
         // Soft indicator thresholds — never block posting
         SOFT_POST_WARN: 500,
         SOFT_REPLY_WARN: 280,
-        REACTIONS: ['😔', '💀', '🫂', '❤️‍🩹'],
+        REACTIONS: ['❤️', '😔', '💀', '💔'],
         MOODS: ['anxious', 'sad', 'excited', 'lonely', "can't stop thinking", 'just bored'],
         CUSTOM_MOOD_PLACEHOLDER: '✏️ other...',
         MOOD_EMOJIS: {
-            'anxious': '🫀',
-            'sad': '🩶',
+            'anxious': '😰',
+            'sad': '🖤',
             'excited': '⚡',
             'lonely': '🌑',
             "can't stop thinking": '🌀',
@@ -50,11 +50,11 @@
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
 
-        const STAR_COUNT  = 160;
-        const SPEED_MIN   = 0.04;
-        const SPEED_MAX   = 0.18;
-        const SIZE_MIN    = 0.4;
-        const SIZE_MAX    = 1.8;
+        const STAR_COUNT = 160;
+        const SPEED_MIN = 0.04;
+        const SPEED_MAX = 0.18;
+        const SIZE_MIN = 0.4;
+        const SIZE_MAX = 1.8;
 
         let stars = [];
         let W = 0, H = 0;
@@ -62,9 +62,9 @@
 
         function randomStar(overrideX) {
             return {
-                x:     overrideX !== undefined ? overrideX : Math.random() * W,
-                y:     Math.random() * H,
-                r:     SIZE_MIN + Math.random() * (SIZE_MAX - SIZE_MIN),
+                x: overrideX !== undefined ? overrideX : Math.random() * W,
+                y: Math.random() * H,
+                r: SIZE_MIN + Math.random() * (SIZE_MAX - SIZE_MIN),
                 speed: SPEED_MIN + Math.random() * (SPEED_MAX - SPEED_MIN),
                 // Twinkle: each star has its own phase offset
                 phase: Math.random() * Math.PI * 2,
@@ -73,7 +73,7 @@
         }
 
         function resize() {
-            W = canvas.width  = window.innerWidth;
+            W = canvas.width = window.innerWidth;
             H = canvas.height = window.innerHeight;
             // Re-seed so stars fill the new size
             stars = Array.from({ length: STAR_COUNT }, () => randomStar());
@@ -97,7 +97,7 @@
 
                 ctx.beginPath();
                 ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(200, 195, 255, ${alpha})`;
+                ctx.fillStyle = `rgba(247, 248, 248, ${alpha})`;
                 ctx.fill();
             });
 
@@ -135,8 +135,12 @@
     // If the server injected __DEV_OVERRIDE=true via /dev-config.js (loaded
     // synchronously before this script), activate spoof mode immediately so the
     // FIRST tick() call shows the open screen without any async wait.
+    if (window.__DEV_OVERRIDE === false) {
+        localStorage.removeItem('3am_spoof');
+    }
+
     const _initialSpoofMode = (window.__DEV_OVERRIDE === true) ||
-                              (localStorage.getItem('3am_spoof') === 'true');
+        (localStorage.getItem('3am_spoof') === 'true');
     if (window.__DEV_OVERRIDE === true) {
         localStorage.setItem('3am_spoof', 'true');
     }
@@ -190,14 +194,57 @@
     // User Identity (cached)
     // ========================================
     let _userId = null;
-    function getUserId() {
-        if (_userId) return _userId;
+    let _userToken = null;
+
+    async function initUserIdentity() {
         _userId = localStorage.getItem('3am_user_id');
+        _userToken = localStorage.getItem('3am_user_token');
+
+        try {
+            const res = await fetch('/api/users/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: _userId || undefined }),
+                signal: AbortSignal.timeout(3000)
+            });
+            if (res.ok) {
+                const data = await res.json();
+                _userId = data.userId;
+                _userToken = data.token;
+                localStorage.setItem('3am_user_id', _userId);
+                localStorage.setItem('3am_user_token', _userToken);
+            }
+        } catch (e) {
+            console.error('Identity sync failed', e);
+        }
+
         if (!_userId) {
             _userId = Date.now().toString(36) + Math.random().toString(36).substr(2);
             localStorage.setItem('3am_user_id', _userId);
         }
+    }
+
+    function getUserId() {
+        if (!_userId) {
+            _userId = localStorage.getItem('3am_user_id');
+        }
         return _userId;
+    }
+
+    function getUserToken() {
+        if (!_userToken) {
+            _userToken = localStorage.getItem('3am_user_token');
+        }
+        return _userToken;
+    }
+
+    function escapeHTML(str) {
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     // Returns the short "soul #xxxx" identifier derived from the userId
@@ -217,54 +264,54 @@
     // ========================================
     const DOM = {
         screens: {
-            closed:  document.getElementById('closed-screen'),
+            closed: document.getElementById('closed-screen'),
             opening: document.getElementById('opening-screen'),
-            open:    document.getElementById('open-screen')
+            open: document.getElementById('open-screen')
         },
         closed: {
             countdown: document.getElementById('countdown'),
-            timezone:  document.getElementById('timezone-display')
+            timezone: document.getElementById('timezone-display')
         },
         opening: { minutesUntil: document.getElementById('minutes-until') },
         open: {
-            postInput:         document.getElementById('post-input'),
-            anonymousCheck:    document.getElementById('anonymous-check'),
-            postButton:        document.getElementById('post-button'),
-            charCount:         document.getElementById('char-count'),
-            postingAsPreview:  document.getElementById('posting-as-preview'),
-            feed:              document.getElementById('feed'),
-            emptyFeed:         document.getElementById('empty-feed'),
-            feedLoading:       document.getElementById('feed-loading'),
-            postCount:         document.getElementById('post-count'),
-            currentTime:       document.getElementById('current-time'),
-            timeRemaining:     document.getElementById('time-remaining'),
-            moodPicker:        document.getElementById('mood-picker'),
-            moodFilterBar:     document.getElementById('mood-filter-bar'),
-            newPostsPill:      document.getElementById('new-posts-pill'),
-            newPostsPillText:  document.getElementById('new-posts-pill-text'),
-            ptrIndicator:      document.getElementById('ptr-indicator'),
-            ptrLabel:          document.getElementById('ptr-label'),
+            postInput: document.getElementById('post-input'),
+            anonymousCheck: document.getElementById('anonymous-check'),
+            postButton: document.getElementById('post-button'),
+            charCount: document.getElementById('char-count'),
+            postingAsPreview: document.getElementById('posting-as-preview'),
+            feed: document.getElementById('feed'),
+            emptyFeed: document.getElementById('empty-feed'),
+            feedLoading: document.getElementById('feed-loading'),
+            postCount: document.getElementById('post-count'),
+            currentTime: document.getElementById('current-time'),
+            timeRemaining: document.getElementById('time-remaining'),
+            moodPicker: document.getElementById('mood-picker'),
+            moodFilterBar: document.getElementById('mood-filter-bar'),
+            newPostsPill: document.getElementById('new-posts-pill'),
+            newPostsPillText: document.getElementById('new-posts-pill-text'),
+            ptrIndicator: document.getElementById('ptr-indicator'),
+            ptrLabel: document.getElementById('ptr-label'),
             desktopRefreshBtn: document.getElementById('desktop-refresh-btn'),
-            typingIndicator:   document.getElementById('typing-indicator'),
-            typingText:        document.getElementById('typing-text'),
+            typingIndicator: document.getElementById('typing-indicator'),
+            typingText: document.getElementById('typing-text'),
         },
-        toast:                document.getElementById('toast'),
-        liveIndicator:        document.getElementById('live-indicator'),
-        userCountValue:       document.getElementById('user-count-value'),
+        toast: document.getElementById('toast'),
+        liveIndicator: document.getElementById('live-indicator'),
+        userCountValue: document.getElementById('user-count-value'),
         activeUsersContainer: document.getElementById('active-users'),
-        ghostOverlay:         document.getElementById('ghost-overlay'),
-        ghostText:            document.getElementById('ghost-text'),
-        ghostMood:            document.getElementById('ghost-mood'),
-        notifBell:            document.getElementById('notif-bell'),
-        notifBadge:           document.getElementById('notif-badge'),
-        notifDrawer:          document.getElementById('notif-drawer'),
-        notifDrawerClose:     document.getElementById('notif-drawer-close'),
-        notifBackdrop:        document.getElementById('notif-backdrop'),
-        notifList:            document.getElementById('notif-list'),
-        notifEmpty:           document.getElementById('notif-empty'),
-        reportPicker:         document.getElementById('report-picker'),
-        reportBackdrop:       document.getElementById('report-backdrop'),
-        onboardingOverlay:    document.getElementById('onboarding-overlay'),
+        ghostOverlay: document.getElementById('ghost-overlay'),
+        ghostText: document.getElementById('ghost-text'),
+        ghostMood: document.getElementById('ghost-mood'),
+        notifBell: document.getElementById('notif-bell'),
+        notifBadge: document.getElementById('notif-badge'),
+        notifDrawer: document.getElementById('notif-drawer'),
+        notifDrawerClose: document.getElementById('notif-drawer-close'),
+        notifBackdrop: document.getElementById('notif-backdrop'),
+        notifList: document.getElementById('notif-list'),
+        notifEmpty: document.getElementById('notif-empty'),
+        reportPicker: document.getElementById('report-picker'),
+        reportBackdrop: document.getElementById('report-backdrop'),
+        onboardingOverlay: document.getElementById('onboarding-overlay'),
     };
 
     // ════════════════════════════════════════════════════════
@@ -283,7 +330,7 @@
     function showToast(message, duration = 3000, variant = '') {
         if (toastTimeout) clearTimeout(toastTimeout);
         let cls = 'toast show';
-        if (variant === 'exit')   cls += ' exit-toast';
+        if (variant === 'exit') cls += ' exit-toast';
         if (variant === 'poetic') cls += ' poetic-toast';
         DOM.toast.className = cls;
         DOM.toast.textContent = message;
@@ -319,7 +366,7 @@
         // Keyboard
         overlay.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight') goOnboardingSlide(onboardingSlide + 1);
-            if (e.key === 'ArrowLeft')  goOnboardingSlide(onboardingSlide - 1);
+            if (e.key === 'ArrowLeft') goOnboardingSlide(onboardingSlide - 1);
         });
 
         // Swipe
@@ -346,10 +393,10 @@
     function updateOnboardingSlide(n, animate) {
         onboardingSlide = n;
         const slides = document.querySelectorAll('.onboarding-slide');
-        const dots   = document.querySelectorAll('.onboarding-dot');
-        const prev   = document.getElementById('onboarding-prev');
-        const next   = document.getElementById('onboarding-next');
-        const enter  = document.getElementById('onboarding-enter');
+        const dots = document.querySelectorAll('.onboarding-dot');
+        const prev = document.getElementById('onboarding-prev');
+        const next = document.getElementById('onboarding-next');
+        const enter = document.getElementById('onboarding-enter');
 
         slides.forEach((s, i) => {
             s.classList.toggle('active', i === n);
@@ -365,8 +412,8 @@
         });
         dots.forEach((d, i) => d.classList.toggle('active', i === n));
 
-        prev.hidden  = (n === 0);
-        next.hidden  = (n === ONBOARDING_TOTAL - 1);
+        prev.hidden = (n === 0);
+        next.hidden = (n === ONBOARDING_TOTAL - 1);
         enter.hidden = (n !== ONBOARDING_TOTAL - 1);
     }
 
@@ -382,10 +429,10 @@
     // UTILITIES
     // ════════════════════════════════════════════════════════
     function formatTime(date) {
-        return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}:${String(date.getSeconds()).padStart(2,'0')}`;
+        return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
     }
     function formatTimeShort(date) {
-        return `${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+        return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
     }
     function formatCountdown(ms) {
         if (ms <= 0) return '00:00:00';
@@ -393,7 +440,7 @@
         const h = Math.floor(total / 3600);
         const m = Math.floor((total % 3600) / 60);
         const s = total % 60;
-        return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     }
 
     function sanitizeInput(text) {
@@ -426,7 +473,7 @@
 
     function getMinutesIntoSession(date) {
         const openMs = (CONFIG.OPEN_HOUR * 60 + CONFIG.OPEN_MINUTE) * 60000;
-        const nowMs  = (date.getHours() * 60 + date.getMinutes()) * 60000 + date.getSeconds() * 1000;
+        const nowMs = (date.getHours() * 60 + date.getMinutes()) * 60000 + date.getSeconds() * 1000;
         return Math.max(0, (nowMs - openMs) / 60000);
     }
 
@@ -443,7 +490,7 @@
     function isInPreOpenWindow(date) {
         if (AppState.isSpoofMode) return false;
         const total = date.getHours() * 60 + date.getMinutes();
-        const open  = CONFIG.OPEN_HOUR * 60 + CONFIG.OPEN_MINUTE;
+        const open = CONFIG.OPEN_HOUR * 60 + CONFIG.OPEN_MINUTE;
         return total >= open - CONFIG.PRE_OPEN_MINUTES && total < open;
     }
 
@@ -465,7 +512,7 @@
     }
 
     function getCurrentState(date) {
-        if (isInOpenWindow(date))    return AppState.OPEN;
+        if (isInOpenWindow(date)) return AppState.OPEN;
         if (isInPreOpenWindow(date)) return AppState.OPENING_SOON;
         return AppState.CLOSED;
     }
@@ -540,14 +587,14 @@
         const exitMsg = document.getElementById('exit-message');
         if (exitMsg) exitMsg.classList.add('active');
         setTimeout(() => {
-            AppState.current          = null;
-            AppState.exitWarn1Shown   = false;
-            AppState.exitWarn2Shown   = false;
+            AppState.current = null;
+            AppState.exitWarn1Shown = false;
+            AppState.exitWarn2Shown = false;
             AppState.exitRitualStarted = false;
-            AppState.ghostShown       = false;
+            AppState.ghostShown = false;
             AppState.newReplies.clear();
-            AppState.notifications    = [];
-            AppState.queuedPosts      = [];
+            AppState.notifications = [];
+            AppState.queuedPosts = [];
             updateBell();
             hideNewPostsPill();
             tick();
@@ -570,9 +617,9 @@
         const secsLeft = getSecondsUntilClose(now);
         const pulseDuration = 0.6 + progress * 1.8;
         let color;
-        if      (secsLeft > 15 * 60) color = 'var(--accent-primary)';
-        else if (secsLeft >  5 * 60) { const t = 1 - (secsLeft - 5*60)/(10*60); color = `hsl(${30+(1-t)*240},85%,60%)`; }
-        else                          color = '#e05555';
+        if (secsLeft > 15 * 60) color = 'var(--accent-primary)';
+        else if (secsLeft > 5 * 60) { const t = 1 - (secsLeft - 5 * 60) / (10 * 60); color = `hsl(${30 + (1 - t) * 240},85%,60%)`; }
+        else color = '#e05555';
         return { pulseDuration, color };
     }
 
@@ -593,7 +640,7 @@
 
     function updateTypingIndicator(count) {
         const indicator = DOM.open.typingIndicator;
-        const text      = DOM.open.typingText;
+        const text = DOM.open.typingText;
         if (!indicator || !text) return;
 
         // Subtract self if we are currently typing
@@ -628,7 +675,7 @@
         const externalReplies = brandNewReplies.filter(r => r.userId !== myId);
         if (externalReplies.length === 0) return;
         AppState.newReplies.add(updatedPost.id);
-        const snippet  = updatedPost.content.slice(0, 30) + (updatedPost.content.length > 30 ? '…' : '');
+        const snippet = updatedPost.content.slice(0, 30) + (updatedPost.content.length > 30 ? '…' : '');
         const existing = AppState.notifications.find(n => n.postId === updatedPost.id);
         if (existing) { existing.count += externalReplies.length; existing.timestamp = Date.now(); }
         else AppState.notifications.unshift({ postId: updatedPost.id, postSnippet: snippet, count: externalReplies.length, timestamp: Date.now() });
@@ -649,7 +696,7 @@
 
     function openNotifDrawer() {
         AppState.notifDrawerOpen = true;
-        DOM.notifDrawer.hidden   = false;
+        DOM.notifDrawer.hidden = false;
         DOM.notifBackdrop.hidden = false;
         DOM.notifBell.setAttribute('aria-expanded', 'true');
         requestAnimationFrame(() => { DOM.notifDrawer.classList.add('open'); DOM.notifBackdrop.classList.add('visible'); });
@@ -673,10 +720,10 @@
             const item = document.createElement('div');
             item.className = 'notif-item';
             item.setAttribute('role', 'listitem');
-            const label   = document.createElement('p'); label.className = 'notif-label'; label.textContent = 'someone whispered on your post';
+            const label = document.createElement('p'); label.className = 'notif-label'; label.textContent = 'someone whispered on your post';
             const snippet = document.createElement('p'); snippet.className = 'notif-snippet'; snippet.textContent = `"${notif.postSnippet}"`;
-            const count   = document.createElement('p'); count.className = 'notif-count'; count.textContent = notif.count === 1 ? '1 new whisper' : `${notif.count} new whispers`;
-            const tapBtn  = document.createElement('button'); tapBtn.className = 'notif-tap-btn'; tapBtn.textContent = 'tap to view →';
+            const count = document.createElement('p'); count.className = 'notif-count'; count.textContent = notif.count === 1 ? '1 new whisper' : `${notif.count} new whispers`;
+            const tapBtn = document.createElement('button'); tapBtn.className = 'notif-tap-btn'; tapBtn.textContent = 'tap to view →';
             tapBtn.setAttribute('aria-label', `Jump to: ${notif.postSnippet}`);
             tapBtn.addEventListener('click', () => { closeNotifDrawer(); jumpToPost(notif.postId); });
             item.appendChild(label); item.appendChild(snippet); item.appendChild(count); item.appendChild(tapBtn);
@@ -733,11 +780,11 @@
         const raw = clientY - AppState.ptrStartY;
         if (raw <= 0 || window.scrollY > 0) { ptrCancel(); return; }
         AppState.ptrDelta = raw;
-        const shift    = Math.min(CONFIG.PTR_MAX_SHIFT, raw * 0.45);
+        const shift = Math.min(CONFIG.PTR_MAX_SHIFT, raw * 0.45);
         const progress = Math.min(1, raw / CONFIG.PTR_THRESHOLD);
         if (DOM.open.ptrIndicator) {
             DOM.open.ptrIndicator.style.transform = `translateY(${shift}px)`;
-            DOM.open.ptrIndicator.style.opacity   = String(progress);
+            DOM.open.ptrIndicator.style.opacity = String(progress);
             if (DOM.open.ptrLabel) DOM.open.ptrLabel.textContent = progress >= 1 ? 'release to refresh' : 'pull to refresh';
         }
         if (DOM.open.feed) DOM.open.feed.style.transform = `translateY(${shift * 0.35}px)`;
@@ -850,7 +897,7 @@
 
     function openReportPicker(postId) {
         AppState.reportPickerPostId = postId;
-        DOM.reportPicker.hidden  = false;
+        DOM.reportPicker.hidden = false;
         DOM.reportBackdrop.hidden = false;
         requestAnimationFrame(() => {
             DOM.reportPicker.classList.add('open');
@@ -870,7 +917,11 @@
         try {
             const res = await fetch(`/api/posts/${encodeURIComponent(postId)}/report`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-spoof-mode': AppState.isSpoofMode },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-spoof-mode': AppState.isSpoofMode,
+                    'x-user-token': getUserToken()
+                },
                 body: JSON.stringify({ reason }),
                 signal: AbortSignal.timeout(5000)
             });
@@ -948,7 +999,10 @@
             showFeedLoading(true);
             const params = AppState.activeMoodFilter ? `?mood=${encodeURIComponent(AppState.activeMoodFilter)}` : '';
             const res = await fetch(`/api/posts${params}`, {
-                headers: { 'x-spoof-mode': AppState.isSpoofMode },
+                headers: {
+                    'x-spoof-mode': AppState.isSpoofMode,
+                    'x-user-token': getUserToken()
+                },
                 signal: AbortSignal.timeout(5000)
             });
             if (res.ok) {
@@ -980,7 +1034,11 @@
         try {
             const res = await fetch('/api/posts', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-spoof-mode': AppState.isSpoofMode },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-spoof-mode': AppState.isSpoofMode,
+                    'x-user-token': getUserToken()
+                },
                 body: JSON.stringify({ content, isAnonymous, userId: getUserId(), mood: (AppState.selectedMood && AppState.selectedMood !== '__custom__') ? AppState.selectedMood : null }),
                 signal: AbortSignal.timeout(5000)
             });
@@ -1011,7 +1069,11 @@
         try {
             const res = await fetch(`/api/posts/${encodeURIComponent(postId)}/react`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-spoof-mode': AppState.isSpoofMode },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-spoof-mode': AppState.isSpoofMode,
+                    'x-user-token': getUserToken()
+                },
                 body: JSON.stringify({ emoji, userId: getUserId() }),
                 signal: AbortSignal.timeout(5000)
             });
@@ -1032,7 +1094,11 @@
         try {
             const res = await fetch(`/api/posts/${encodeURIComponent(postId)}/reply`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'x-spoof-mode': AppState.isSpoofMode },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-spoof-mode': AppState.isSpoofMode,
+                    'x-user-token': getUserToken()
+                },
                 body: JSON.stringify({ content, userId: getUserId(), mood: mood || null }),
                 signal: AbortSignal.timeout(5000)
             });
@@ -1211,16 +1277,49 @@
 
         if (post.replies && post.replies.length > 0) {
             const list = document.createElement('div'); list.className = 'whisper-list';
-            post.replies.forEach(reply => {
-                const item = document.createElement('div'); item.className = 'whisper-item';
+            post.replies.forEach((reply, idx) => {
+                const item = document.createElement('div');
+                item.className = 'whisper-item';
+                item.dataset.replyNum = reply.replyNum || (idx + 1);
+
+                const header = document.createElement('div');
+                header.className = 'whisper-header';
+
+                const numSpan = document.createElement('span');
+                numSpan.className = 'whisper-num';
+                numSpan.textContent = `No. ${reply.replyNum || (idx + 1)}`;
+                header.appendChild(numSpan);
+
+                const quoteBtn = document.createElement('button');
+                quoteBtn.className = 'whisper-quote-btn';
+                quoteBtn.setAttribute('aria-label', `Quote reply No. ${reply.replyNum || (idx + 1)}`);
+                quoteBtn.textContent = '💬';
+                quoteBtn.addEventListener('click', () => {
+                    const textarea = section.querySelector('.whisper-textarea');
+                    if (textarea) {
+                        textarea.value += ` >>#${reply.replyNum || (idx + 1)} `;
+                        textarea.focus();
+                        textarea.dispatchEvent(new Event('input'));
+                    }
+                });
+                header.appendChild(quoteBtn);
+
                 if (reply.mood) {
                     const mt = document.createElement('span');
                     mt.className = `whisper-mood mood-tag mood-${reply.mood.replace(/[^a-z]/g, '-')}`;
                     mt.textContent = `${CONFIG.MOOD_EMOJIS[reply.mood] || ''} ${reply.mood}`;
-                    item.appendChild(mt);
+                    header.appendChild(mt);
                 }
-                const c = document.createElement('p'); c.className = 'whisper-content'; c.textContent = reply.content;
-                item.appendChild(c); list.appendChild(item);
+
+                item.appendChild(header);
+
+                const c = document.createElement('p');
+                c.className = 'whisper-content';
+                const escaped = escapeHTML(reply.content);
+                c.innerHTML = escaped.replace(/&gt;&gt;#(\d+)/g, '<span class="quote-link" data-ref="$1">>>#$1</span>');
+                
+                item.appendChild(c);
+                list.appendChild(item);
             });
             section.appendChild(list);
         } else {
@@ -1228,12 +1327,10 @@
             section.appendChild(empty);
         }
 
-        const userReplyCount = post.replies ? post.replies.filter(r => r.userId === userId).length : 0;
-        const alreadyReplied = userReplyCount >= 3;
-        const atLimit        = post.replies && post.replies.length >= 3;
-        const isReplying     = AppState.replyingPostIds.has(post.id);
+        const atLimit = post.replies && post.replies.length >= 100;
+        const isReplying = AppState.replyingPostIds.has(post.id);
 
-        if (!atLimit && !alreadyReplied) {
+        if (!atLimit) {
             const inputArea = document.createElement('div'); inputArea.className = 'whisper-input-area';
             const replyMoodPicker = document.createElement('div'); replyMoodPicker.className = 'whisper-mood-picker'; replyMoodPicker.dataset.postId = post.id; replyMoodPicker.dataset.selectedMood = '';
             CONFIG.MOODS.forEach(mood => {
@@ -1244,7 +1341,6 @@
             const inputRow = document.createElement('div'); inputRow.className = 'whisper-input-row';
             const textarea = document.createElement('textarea'); textarea.className = 'whisper-textarea'; textarea.placeholder = 'whisper something...';
             textarea.rows = 1; textarea.setAttribute('aria-label', 'Write a whisper reply');
-            // No maxLength — soft limit only
             const sendBtn = document.createElement('button'); sendBtn.className = 'whisper-send-btn'; sendBtn.setAttribute('aria-label', 'Send whisper'); sendBtn.disabled = isReplying; sendBtn.textContent = isReplying ? '…' : '↑';
             sendBtn.addEventListener('click', () => { const c = textarea.value.trim(); if (!c) return; addReply(post.id, c, replyMoodPicker.dataset.selectedMood || null); });
             textarea.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendBtn.click(); } });
@@ -1258,10 +1354,8 @@
             inputRow.appendChild(textarea); inputRow.appendChild(sendBtn);
             inputArea.appendChild(replyMoodPicker); inputArea.appendChild(inputRow);
             section.appendChild(inputArea);
-        } else if (atLimit) {
-            const msg = document.createElement('p'); msg.className = 'whisper-limit'; msg.textContent = 'this post is full.'; section.appendChild(msg);
-        } else if (alreadyReplied) {
-            const msg = document.createElement('p'); msg.className = 'whisper-limit'; msg.textContent = "you've whispered 3 times here. that's your limit."; section.appendChild(msg);
+        } else {
+            const msg = document.createElement('p'); msg.className = 'whisper-limit'; msg.textContent = 'this post is full (100 whispers limit reached).'; section.appendChild(msg);
         }
         return section;
     }
@@ -1276,20 +1370,20 @@
         // Starfield runs on closed/opening screens; pauses when app is open (perf)
         if (window.__starfield) {
             if (name === 'open') window.__starfield.stop();
-            else                 window.__starfield.start();
+            else window.__starfield.start();
         }
     }
 
     function renderClosedScreen() {
         const now = getTrustedTime().time;
         DOM.closed.countdown.textContent = formatCountdown(getNextOpeningTime(now) - now);
-        DOM.closed.timezone.textContent  = AppState.timezone || 'Unknown';
+        DOM.closed.timezone.textContent = AppState.timezone || 'Unknown';
     }
     function renderOpeningScreen() { DOM.opening.minutesUntil.textContent = getMinutesUntilOpen(getTrustedTime().time); }
 
     function renderOpenScreen() {
         const now = getTrustedTime().time;
-        DOM.open.currentTime.textContent   = formatTimeShort(now);
+        DOM.open.currentTime.textContent = formatTimeShort(now);
         // In spoof/dev mode the real close time may already be past (e.g. 2 PM)
         // Show a placeholder so the UI doesn't say "closing…" while testing.
         if (AppState.isSpoofMode) {
@@ -1313,7 +1407,7 @@
 
     function renderPosts() {
         if (AppState.isLoading) return;
-        const userId    = getUserId();
+        const userId = getUserId();
         const heartbeat = getHeartbeatStyle(getTrustedTime().time);
         DOM.open.feed.innerHTML = '';
         const visible = AppState.posts.filter(p => !AppState.hiddenPosts.has(p.id));
@@ -1347,7 +1441,7 @@
 
         // Header
         const header = document.createElement('div'); header.className = 'post-header';
-        const meta   = document.createElement('div'); meta.className = 'post-meta';
+        const meta = document.createElement('div'); meta.className = 'post-meta';
         if (post.isKept) { const kb = document.createElement('span'); kb.className = 'kept-badge'; kb.textContent = '✨ Kept'; kb.title = 'This post survived the nightly cleanup'; meta.appendChild(kb); }
         const timeEl = document.createElement('span'); timeEl.className = 'post-time'; timeEl.textContent = formatTime(postDate); timeEl.title = postDate.toLocaleString();
         const author = document.createElement('span');
@@ -1382,9 +1476,9 @@
             btn.appendChild(es); btn.appendChild(cs); actions.appendChild(btn);
         });
 
-        const whisperCount  = post.replies ? post.replies.length : 0;
+        const whisperCount = post.replies ? post.replies.length : 0;
         const isWhisperOpen = AppState.openWhisperPostId === post.id;
-        const hasNewReply   = post.userId === userId && AppState.newReplies.has(post.id);
+        const hasNewReply = post.userId === userId && AppState.newReplies.has(post.id);
 
         const whisperBtn = document.createElement('button');
         whisperBtn.className = 'whisper-btn' + (isWhisperOpen ? ' active' : ''); whisperBtn.dataset.action = 'whisper-toggle';
@@ -1412,7 +1506,7 @@
         }
         const over = length - CONFIG.SOFT_POST_WARN;
         DOM.open.charCount.textContent = `+${over}`;
-        DOM.open.charCount.className   = 'char-count over' + (over > 100 ? ' over-far' : '');
+        DOM.open.charCount.className = 'char-count over' + (over > 100 ? ' over-far' : '');
     }
 
     // ════════════════════════════════════════════════════════
@@ -1533,8 +1627,9 @@
     // ════════════════════════════════════════════════════════
     // INIT
     // ════════════════════════════════════════════════════════
-    function init() {
+    async function init() {
         AppState.timezone = getTimezone();
+        await initUserIdentity();
         syncServerTime();
         setInterval(syncServerTime, CONFIG.TIME_SYNC_INTERVAL_MS);
         renderMoodPicker();
@@ -1545,10 +1640,10 @@
 
         // Socket.io
         try {
-            AppState.socket = io({ reconnectionDelay: 1000, reconnectionDelayMax: 10000 });
+            AppState.socket = io({ reconnectionDelay: 1000, reconnectionDelayMax: 10000, auth: { token: getUserToken(), userId: getUserId() } });
 
-            AppState.socket.on('connect',       () => DOM.liveIndicator.classList.add('active'));
-            AppState.socket.on('disconnect',    () => DOM.liveIndicator.classList.remove('active'));
+            AppState.socket.on('connect', () => DOM.liveIndicator.classList.add('active'));
+            AppState.socket.on('disconnect', () => DOM.liveIndicator.classList.remove('active'));
             AppState.socket.on('connect_error', () => { if (AppState.current === AppState.OPEN) loadPosts(); });
 
             AppState.socket.on('init', (data) => {
@@ -1640,7 +1735,7 @@
         // Notification bell
         if (DOM.notifBell) DOM.notifBell.addEventListener('click', () => AppState.notifDrawerOpen ? closeNotifDrawer() : openNotifDrawer());
         if (DOM.notifDrawerClose) DOM.notifDrawerClose.addEventListener('click', closeNotifDrawer);
-        if (DOM.notifBackdrop)   DOM.notifBackdrop.addEventListener('click', closeNotifDrawer);
+        if (DOM.notifBackdrop) DOM.notifBackdrop.addEventListener('click', closeNotifDrawer);
 
         // Report picker
         if (DOM.reportBackdrop) DOM.reportBackdrop.addEventListener('click', closeReportPicker);
@@ -1680,7 +1775,7 @@
             ptrMove(e.touches[0].clientY);
             if (window.scrollY === 0 && AppState.ptrDelta > 0) e.preventDefault();
         }, { passive: false });
-        window.addEventListener('touchend',    () => { if (AppState.ptrActive) ptrEnd(); },    { passive: true });
+        window.addEventListener('touchend', () => { if (AppState.ptrActive) ptrEnd(); }, { passive: true });
         window.addEventListener('touchcancel', () => { if (AppState.ptrActive) ptrCancel(); }, { passive: true });
 
         // Spoof mode
@@ -1690,15 +1785,15 @@
             moonIcon.addEventListener('click', () => {
                 const now = Date.now();
                 clickCount = (now - lastClick < 500) ? clickCount + 1 : 1;
-                lastClick  = now;
+                lastClick = now;
                 if (clickCount === 3) { clickCount = 0; toggleSpoofMode(); }
             });
         }
         const bypassBtn = document.getElementById('bypass-btn');
         if (bypassBtn) {
-            // Show if ?dev is in URL (set immediately). Also shown after checkDevOverride
-            // runs (see showDevModeBadge — it also reveals bypass btn).
-            if (window.location.search.includes('dev')) bypassBtn.classList.add('visible');
+            if (window.__DEV_OVERRIDE === true && window.location.search.includes('dev')) {
+                bypassBtn.classList.add('visible');
+            }
             bypassBtn.addEventListener('click', toggleSpoofMode);
         }
     }
@@ -1716,7 +1811,82 @@
     else init();
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => { }));
+    }
+
+    // ========================================
+    // Quote Links & Floating Previews
+    // ========================================
+    let activePreview = null;
+
+    document.addEventListener('click', (e) => {
+        const quoteLink = e.target.closest('.quote-link');
+        if (quoteLink) {
+            const refNum = quoteLink.dataset.ref;
+            const postCard = quoteLink.closest('.post-card');
+            if (postCard) {
+                const targetReply = postCard.querySelector(`.whisper-item[data-reply-num="${refNum}"]`);
+                if (targetReply) {
+                    targetReply.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    targetReply.classList.remove('highlight-flash');
+                    void targetReply.offsetWidth; // trigger reflow
+                    targetReply.classList.add('highlight-flash');
+                    setTimeout(() => targetReply.classList.remove('highlight-flash'), 2000);
+                }
+            }
+        }
+    });
+
+    document.addEventListener('mouseover', (e) => {
+        const quoteLink = e.target.closest('.quote-link');
+        if (quoteLink) {
+            const refNum = quoteLink.dataset.ref;
+            const postCard = quoteLink.closest('.post-card');
+            if (postCard) {
+                const targetReply = postCard.querySelector(`.whisper-item[data-reply-num="${refNum}"]`);
+                if (targetReply) {
+                    if (activePreview) activePreview.remove();
+
+                    const preview = document.createElement('div');
+                    preview.className = 'quote-preview';
+                    preview.innerHTML = targetReply.innerHTML;
+                    
+                    document.body.appendChild(preview);
+                    activePreview = preview;
+
+                    positionPreview(quoteLink, preview);
+                }
+            }
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const quoteLink = e.target.closest('.quote-link');
+        if (quoteLink) {
+            if (activePreview) {
+                activePreview.remove();
+                activePreview = null;
+            }
+        }
+    });
+
+    function positionPreview(link, preview) {
+        const linkRect = link.getBoundingClientRect();
+        const prevRect = preview.getBoundingClientRect();
+        
+        let top = linkRect.top - prevRect.height - 8 + window.scrollY;
+        let left = linkRect.left + window.scrollX;
+        
+        if (top < window.scrollY) {
+            top = linkRect.bottom + 8 + window.scrollY;
+        }
+        if (left + prevRect.width > window.innerWidth) {
+            left = window.innerWidth - prevRect.width - 12;
+        }
+        if (left < 0) left = 12;
+
+        preview.style.top = `${top}px`;
+        preview.style.left = `${left}px`;
     }
 
 })();

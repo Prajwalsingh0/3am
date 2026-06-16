@@ -1,7 +1,7 @@
 {
     "name": "The 3AM Channel",
     "short_name": "3AM",
-    "description": "A hidden space that opens at 3:00 AM. Say what you can only say when the world is asleep.",
+    "description": "A hidden space that opens at 1:00 AM. Say what you can only say when the world is asleep.",
     "start_url": "/",
     "id": "/",
     "display": "standalone",

@@ -29,12 +29,13 @@ const moodRule = body('mood')
     .trim()
     .isLength({ min: 1, max: 20 }).withMessage('Mood must be 1–20 characters');
 
-// Post creation — min 1 char, NO upper limit (soft 500 in UI only)
+// Post creation — min 1 char, max 500 chars (hard limit)
 const createPostValidators = [
     body('content')
         .trim()
         .notEmpty().withMessage('Content is required')
-        .isLength({ min: 1 }).withMessage('Content cannot be empty'),
+        .isLength({ min: 1 }).withMessage('Content cannot be empty')
+        .isLength({ max: 500 }).withMessage('Content too long (maximum 500 characters)'),
     userIdRule,
     body('isAnonymous')
         .optional()
@@ -47,17 +48,18 @@ const createPostValidators = [
 const addReactionValidators = [
     body('emoji')
         .notEmpty().withMessage('Emoji is required')
-        .isIn(['😔', '💀', '🫂', '❤️‍🩹']).withMessage('Invalid emoji'),
+        .isIn(['❤️', '😔', '💀', '💔', '🤍', '🌙', '🫂', '❤️‍🩹']).withMessage('Invalid emoji'),
     userIdRule,
     validate
 ];
 
-// Whisper reply — min 1 char, NO upper limit (soft 280 in UI only)
+// Whisper reply — min 1 char, max 500 chars (hard limit)
 const addReplyValidators = [
     body('content')
         .trim()
         .notEmpty().withMessage('Whisper content is required')
-        .isLength({ min: 1 }).withMessage('Whisper cannot be empty'),
+        .isLength({ min: 1 }).withMessage('Whisper cannot be empty')
+        .isLength({ max: 500 }).withMessage('Whisper too long (maximum 500 characters)'),
     userIdRule,
     moodRule,
     validate
