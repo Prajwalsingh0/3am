@@ -236,7 +236,8 @@ process.on('SIGTERM', () => gracefulShutdown(0));
 process.on('SIGINT', () => gracefulShutdown(0));
 
 // Start Boot sequence
-const PORT = config.server.port;
+//added || bcoz issue in deployment
+const PORT = process.env.PORT || config.server.port;
 if (process.env.NODE_ENV !== 'test') {
     connectDatabase().then(() => {
         server.listen(PORT, () => {
