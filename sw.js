@@ -4,7 +4,7 @@
  * API calls are always network-first and never cached.
  */
 
-const CACHE_NAME = '3am-channel-v8';
+const CACHE_NAME = '3am-channel-v9';
 const SHELL_ASSETS = [
     '/',
     '/index.html',

@@ -7,7 +7,7 @@ const {
     registerUser,
     getPosts,
     createPost,
-    addReaction,
+    addSeen,
     addReply,
     addReport,
     getGhostPost
@@ -17,7 +17,7 @@ const { validateTimeWindow } = require('../middleware/timeGate');
 
 const {
     createPostValidators,
-    addReactionValidators,
+    addSeenValidators,
     addReplyValidators
 } = require('../../middleware/validators');
 
@@ -65,8 +65,8 @@ router.get('/posts', validateTimeWindow, getPosts);
 // Create new post (requires client signature auth + validation + rate limits)
 router.post('/posts', validateTimeWindow, postLimiter, authenticateUser, createPostValidators, createPost);
 
-// Add reaction (requires signature auth)
-router.post('/posts/:postId/react', validateTimeWindow, authenticateUser, addReactionValidators, addReaction);
+// Add seen status (requires signature auth)
+router.post('/posts/:postId/seen', validateTimeWindow, authenticateUser, addSeenValidators, addSeen);
 
 // Whisper reply (requires signature auth)
 router.post('/posts/:postId/reply', validateTimeWindow, authenticateUser, addReplyValidators, addReply);

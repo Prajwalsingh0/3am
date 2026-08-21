@@ -56,19 +56,29 @@
             <div class="onboarding-slide" data-slide="0">
                 <div class="onboarding-icon">🌙</div>
                 <h2 class="onboarding-title">welcome to 3am</h2>
-                <p class="onboarding-body">this place only exists between 1 and 6 in the morning</p>
+                <p class="onboarding-body">this place only exists between 1:00 AM and 6:00 AM. gone by dawn.</p>
             </div>
             <!-- Slide 2 -->
             <div class="onboarding-slide" data-slide="1">
                 <div class="onboarding-icon">👁</div>
-                <h2 class="onboarding-title">no names. no faces. no history.</h2>
-                <p class="onboarding-body">everything you say disappears at 6am. forever.</p>
+                <h2 class="onboarding-title">no names. no history.</h2>
+                <p class="onboarding-body">everything disappears at 6AM. one random opt-in post is kept to haunt the next night.</p>
             </div>
             <!-- Slide 3 -->
             <div class="onboarding-slide" data-slide="2">
-                <div class="onboarding-icon">🤫</div>
-                <h2 class="onboarding-title">be honest. be kind. be weird.</h2>
-                <p class="onboarding-body">this is the only place no one is watching.</p>
+                <div class="onboarding-icon">🛡️</div>
+                <h2 class="onboarding-title">safe harbor</h2>
+                <p class="onboarding-body">harassment/spam are blocked. you can mute any soul or report posts instantly.</p>
+            </div>
+            <!-- Slide 4 -->
+            <div class="onboarding-slide" data-slide="3">
+                <div class="onboarding-icon">🤝</div>
+                <h2 class="onboarding-title">safe space agreement</h2>
+                <p class="onboarding-body">i promise to respect others, avoid slurs or spam, and keep 3AM a quiet sanctuary.</p>
+                <div class="agree-container" style="margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <input type="checkbox" id="safe-space-agree" style="accent-color: var(--accent-brand);">
+                    <label for="safe-space-agree" style="font-size: 13px; color: var(--text-secondary); cursor: pointer;">i agree to these rules</label>
+                </div>
             </div>
         </div>
 
@@ -77,13 +87,14 @@
             <span class="onboarding-dot active" data-dot="0"></span>
             <span class="onboarding-dot" data-dot="1"></span>
             <span class="onboarding-dot" data-dot="2"></span>
+            <span class="onboarding-dot" data-dot="3"></span>
         </div>
 
         <!-- Navigation -->
         <div class="onboarding-nav">
             <button id="onboarding-prev" class="onboarding-arrow" aria-label="Previous slide" hidden>←</button>
             <button id="onboarding-next" class="onboarding-arrow" aria-label="Next slide">→</button>
-            <button id="onboarding-enter" class="onboarding-enter" aria-label="Enter the channel" hidden>enter</button>
+            <button id="onboarding-enter" class="onboarding-enter" aria-label="Enter the channel" disabled hidden>enter</button>
         </div>
     </div>
 
@@ -219,6 +230,10 @@
                                 <input type="checkbox" id="anonymous-check" checked aria-label="Post anonymously">
                                 <span class="toggle-label">Anonymous</span>
                             </label>
+                            <label class="survivor-toggle">
+                                <input type="checkbox" id="survivor-check" checked aria-label="Opt-in to let post survive">
+                                <span class="toggle-label">Haunt next night</span>
+                            </label>
                             <div class="post-actions-right">
                                 <span id="char-count" class="char-count" aria-live="polite"></span>
                                 <button id="post-button" class="post-btn" disabled aria-label="Share post">
@@ -296,6 +311,20 @@
             <blockquote id="ghost-text" class="ghost-text"></blockquote>
             <p id="ghost-mood" class="ghost-mood" style="display:none"></p>
             <p class="ghost-dismiss">tap anywhere to continue</p>
+        </div>
+    </div>
+
+    <!-- Night Wrap overlay -->
+    <div id="night-wrap-overlay" class="night-wrap-overlay" role="dialog" aria-modal="true" aria-label="Night wrap summary" hidden>
+        <div class="night-wrap-inner">
+            <div class="night-wrap-icon">✨</div>
+            <h2 class="night-wrap-title">the night is fading</h2>
+            <p class="night-wrap-body">the clock is turning. tonight, insomniacs gathered to share their silent thoughts. soon, all will be gone.</p>
+            <div class="night-wrap-stats">
+                <span id="night-wrap-posts-count">0</span> thoughts shared · <span id="night-wrap-users-count">0</span> souls connected
+            </div>
+            <p class="night-wrap-dismiss">sleep well. the door closes at 6:00 AM.</p>
+            <button id="night-wrap-close" class="night-wrap-close">close</button>
         </div>
     </div>
 

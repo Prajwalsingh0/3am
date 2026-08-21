@@ -124,75 +124,28 @@ class PostRepository {
         }
     }
 
-    static async addReaction(postId, emoji, userId) {
-        const ALLOWED_EMOJIS = ['❤️', '😔', '💀', '💔', '🤍', '🌙', '🫂', '❤️‍🩹'];
-        
+    static async markAsSeen(postId, userId) {
         if (this.verifyConnection()) {
             const post = await Post.findOne({ id: postId });
             if (!post) return null;
             
-            const arr = post.reactions[emoji] || [];
-            const idx = arr.indexOf(userId);
-            if (idx > -1) {
-                arr.splice(idx, 1); // remove
-            } else {
-                // remove from all other emojis
-                ALLOWED_EMOJIS.forEach(e => {
-                    const otherArr = post.reactions[e];
-                    if (Array.isArray(otherArr)) {
-                        const oIdx = otherArr.indexOf(userId);
-                        if (oIdx > -1) {
-                            otherArr.splice(oIdx, 1);
-                            post.markModified(`reactions.${e}`);
-                        }
-                    }
-                });
-                arr.push(userId); // add
+            if (!post.seenBy.includes(userId)) {
+                post.seenBy.push(userId);
+                post.seenCount = post.seenBy.length;
+                await post.save();
             }
-            post.reactions[emoji] = arr;
-            post.totalReactions = ALLOWED_EMOJIS.reduce((sum, e) => {
-                const list = post.reactions[e];
-                return sum + (Array.isArray(list) ? list.length : 0);
-            }, 0);
-            post.markModified(`reactions.${emoji}`);
-            await post.save();
             return post;
         } else {
             const post = memoryPosts.find(p => p.id === postId);
             if (!post) return null;
-            if (!post.reactions) {
-                post.reactions = {
-                    '❤️': [],
-                    '😔': [],
-                    '💀': [],
-                    '💔': [],
-                    '🤍': [],
-                    '🌙': [],
-                    '🫂': [],
-                    '❤️‍🩹': []
-                };
+            if (!post.seenBy) {
+                post.seenBy = [];
             }
-            const arr = post.reactions[emoji] || [];
-            const idx = arr.indexOf(userId);
-            if (idx > -1) {
-                arr.splice(idx, 1);
-            } else {
-                // remove from all other emojis
-                ALLOWED_EMOJIS.forEach(e => {
-                    const otherArr = post.reactions[e];
-                    if (Array.isArray(otherArr)) {
-                        const oIdx = otherArr.indexOf(userId);
-                        if (oIdx > -1) otherArr.splice(oIdx, 1);
-                    }
-                });
-                arr.push(userId);
+            if (!post.seenBy.includes(userId)) {
+                post.seenBy.push(userId);
+                post.seenCount = post.seenBy.length;
+                saveMemoryDb(memoryPosts, memoryGhostPosts);
             }
-            post.reactions[emoji] = arr;
-            post.totalReactions = ALLOWED_EMOJIS.reduce((sum, e) => {
-                const list = post.reactions[e];
-                return sum + (Array.isArray(list) ? list.length : 0);
-            }, 0);
-            saveMemoryDb(memoryPosts, memoryGhostPosts);
             return post;
         }
     }
@@ -325,19 +278,14 @@ class PostRepository {
                 await GhostPost.deleteMany({ _id: { $in: oldest.map(g => g._id) } });
             }
 
-            const postsWithScores = yesterdayPosts.map(post => ({
-                post,
-                total: Object.values(post.reactions).reduce((sum, arr) => sum + arr.length, 0)
-            }));
-            postsWithScores.sort((a, b) => b.total - a.total);
-
-            const winner = postsWithScores[0].post;
+            const optInPosts = yesterdayPosts.filter(p => p.optInSurvivor !== false);
+            const candidates = optInPosts.length > 0 ? optInPosts : yesterdayPosts;
+            const winner = candidates[Math.floor(Math.random() * candidates.length)];
             winner.isKept = true;
-            winner.totalReactions = postsWithScores[0].total;
             await winner.save();
-            logger.info(`🏆 Post survived with ${postsWithScores[0].total} reactions`);
+            logger.info(`🏆 Post survived as a random selection`);
 
-            const idsToDelete = postsWithScores.slice(1).map(p => p.post._id);
+            const idsToDelete = yesterdayPosts.filter(p => p._id.toString() !== winner._id.toString()).map(p => p._id);
             if (idsToDelete.length > 0) {
                 await Post.deleteMany({ _id: { $in: idsToDelete } });
                 logger.info(`🗑️  Deleted ${idsToDelete.length} posts`);
@@ -355,17 +303,12 @@ class PostRepository {
                 memoryGhostPosts = memoryGhostPosts.slice(-30);
             }
 
-            const postsWithScores = yesterdayPosts.map(post => ({
-                post,
-                total: Object.values(post.reactions || {}).reduce((sum, arr) => sum + arr.length, 0)
-            }));
-            postsWithScores.sort((a, b) => b.total - a.total);
+            const optInPosts = yesterdayPosts.filter(p => p.optInSurvivor !== false);
+            const candidates = optInPosts.length > 0 ? optInPosts : yesterdayPosts;
+            const winner = candidates[Math.floor(Math.random() * candidates.length)];
+            winner.isKept = true;
 
-            const winner = postsWithScores[0];
-            winner.post.isKept = true;
-            winner.post.totalReactions = winner.total;
-
-            const idsToDelete = new Set(postsWithScores.slice(1).map(p => p.post.id));
+            const idsToDelete = new Set(yesterdayPosts.filter(p => p.id !== winner.id).map(p => p.id));
             memoryPosts = memoryPosts.filter(p => !idsToDelete.has(p.id));
             saveMemoryDb(memoryPosts, memoryGhostPosts);
             logger.info(`🗑️  Deleted ${idsToDelete.size} memory posts`);

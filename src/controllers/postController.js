@@ -3,6 +3,13 @@ const config = require('../../config');
 const PostRepository = require('../services/PostRepository');
 const logger = require('../../utils/logger');
 
+const PROFANITY_LIST = ['abuse', 'slur', 'harassment', 'hate', 'offensiveword'];
+function containsProfanity(text) {
+    if (!text) return false;
+    const lower = text.toLowerCase();
+    return PROFANITY_LIST.some(word => lower.includes(word));
+}
+
 // Format helper to ensure API payload consistency
 function formatPost(p) {
     return {
@@ -12,7 +19,8 @@ function formatPost(p) {
         userId: p.userId,
         timestamp: p.timestamp instanceof Date ? p.timestamp.toISOString() : p.timestamp,
         mood: p.mood || null,
-        reactions: p.reactions,
+        seenCount: p.seenCount || 0,
+        optInSurvivor: p.optInSurvivor !== false,
         replies: (p.replies || []).map(r => ({
             id: r.id,
             replyNum: r.replyNum, // Thread number sequence (4chan-style)
@@ -88,7 +96,12 @@ async function getPosts(req, res, next) {
 // Create a new post
 async function createPost(req, res, next) {
     try {
-        const { content, isAnonymous, userId, mood } = req.body;
+        const { content, isAnonymous, userId, mood, optInSurvivor } = req.body;
+
+        // Slur / Profanity filter validation check
+        if (containsProfanity(content)) {
+            return res.status(400).json({ error: { message: 'Your thought contains words that violate the safe space guidelines.' } });
+        }
         
         // Rate limiting check per user ID
         const hasPostedRecently = await PostRepository.hasRecentPost(userId);
@@ -103,16 +116,9 @@ async function createPost(req, res, next) {
             userId,
             mood: (mood && typeof mood === 'string' && mood.length <= 20) ? mood : null,
             timestamp: new Date(),
-            reactions: {
-                '❤️': [],
-                '😔': [],
-                '💀': [],
-                '💔': [],
-                '🤍': [],
-                '🌙': [],
-                '🫂': [],
-                '❤️‍🩹': []
-            },
+            seenBy: [],
+            seenCount: 0,
+            optInSurvivor: optInSurvivor !== false,
             replies: [],
             reports: [],
             sessionDate: new Date().toISOString().split('T')[0]
@@ -131,17 +137,17 @@ async function createPost(req, res, next) {
     }
 }
 
-// Add a reaction (toggles on/off, max 1 reaction per user per post)
-async function addReaction(req, res, next) {
+// Add a seen view to the post
+async function addSeen(req, res, next) {
     try {
         const { postId } = req.params;
-        const { emoji, userId } = req.body;
+        const { userId } = req.body;
         
         if (!postId || typeof postId !== 'string' || postId.length > 50) {
             return res.status(400).json({ error: { message: 'Invalid post ID' } });
         }
         
-        const post = await PostRepository.addReaction(postId, emoji, userId);
+        const post = await PostRepository.markAsSeen(postId, userId);
         if (!post) {
             return res.status(404).json({ error: { message: 'Post not found' } });
         }
@@ -249,7 +255,7 @@ module.exports = {
     registerUser,
     getPosts,
     createPost,
-    addReaction,
+    addSeen,
     addReply,
     addReport,
     getGhostPost,

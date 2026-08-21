@@ -45,10 +45,7 @@ const createPostValidators = [
     validate
 ];
 
-const addReactionValidators = [
-    body('emoji')
-        .notEmpty().withMessage('Emoji is required')
-        .isIn(['❤️', '😔', '💀', '💔', '🤍', '🌙', '🫂', '❤️‍🩹']).withMessage('Invalid emoji'),
+const addSeenValidators = [
     userIdRule,
     validate
 ];
@@ -74,7 +71,7 @@ const addReportValidators = [
 
 module.exports = {
     createPostValidators,
-    addReactionValidators,
+    addSeenValidators,
     addReplyValidators,
     addReportValidators,
     VALID_MOODS,

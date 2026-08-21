@@ -166,6 +166,7 @@
         exitWarn2Shown: false,
         exitRitualStarted: false,
         ghostShown: false,
+        nightWrapShown: false,
 
         // ── Reply Notifications ──────────────────────────────────
         newReplies: new Set(),
@@ -182,6 +183,8 @@
         // ── Reports ──────────────────────────────────────────────
         reportedPosts: new Set(),   // postIds already reported this session
         hiddenPosts: new Set(),     // postIds hidden from feed (local only)
+        blockedUsers: new Set(),    // userIds muted/blocked locally this session
+        seenPosts: new Set(),       // postIds marked seen by this user this session
         activeMenuPostId: null,     // which post's ··· menu is open
         reportPickerPostId: null,   // which post's report reason picker is open
 
@@ -197,6 +200,15 @@
     let _userToken = null;
 
     async function initUserIdentity() {
+        // Nightly Reset Logic: reset identity if date changes
+        const todayKey = new Date().toISOString().split('T')[0];
+        const storedDate = localStorage.getItem('3am_session_date');
+        if (storedDate !== todayKey) {
+            localStorage.removeItem('3am_user_id');
+            localStorage.removeItem('3am_user_token');
+            localStorage.setItem('3am_session_date', todayKey);
+        }
+
         _userId = localStorage.getItem('3am_user_id');
         _userToken = localStorage.getItem('3am_user_token');
 
@@ -345,7 +357,7 @@
     // ONBOARDING
     // ════════════════════════════════════════════════════════
     let onboardingSlide = 0;
-    const ONBOARDING_TOTAL = 3;
+    const ONBOARDING_TOTAL = 4;
 
     function initOnboarding() {
         if (localStorage.getItem('3am_visited')) return; // already seen
@@ -358,7 +370,7 @@
         updateOnboardingSlide(0, /* animate= */ false);
 
         // Buttons
-        document.getElementById('onboarding-skip').addEventListener('click', dismissOnboarding);
+        document.getElementById('onboarding-skip').addEventListener('click', () => goOnboardingSlide(ONBOARDING_TOTAL - 1));
         document.getElementById('onboarding-prev').addEventListener('click', () => goOnboardingSlide(onboardingSlide - 1));
         document.getElementById('onboarding-next').addEventListener('click', () => goOnboardingSlide(onboardingSlide + 1));
         document.getElementById('onboarding-enter').addEventListener('click', dismissOnboarding);
@@ -397,6 +409,7 @@
         const prev = document.getElementById('onboarding-prev');
         const next = document.getElementById('onboarding-next');
         const enter = document.getElementById('onboarding-enter');
+        const skip = document.getElementById('onboarding-skip');
 
         slides.forEach((s, i) => {
             s.classList.toggle('active', i === n);
@@ -415,9 +428,27 @@
         prev.hidden = (n === 0);
         next.hidden = (n === ONBOARDING_TOTAL - 1);
         enter.hidden = (n !== ONBOARDING_TOTAL - 1);
+        skip.hidden = (n === ONBOARDING_TOTAL - 1);
+
+        if (n === ONBOARDING_TOTAL - 1) {
+            const checkbox = document.getElementById('safe-space-agree');
+            const handleAgreeChange = () => {
+                enter.disabled = !checkbox.checked;
+            };
+            if (checkbox) {
+                checkbox.addEventListener('change', handleAgreeChange);
+                handleAgreeChange(); // initialize
+            }
+        }
     }
 
     function dismissOnboarding() {
+        // Enforce safe space agreement
+        const checkbox = document.getElementById('safe-space-agree');
+        if (checkbox && !checkbox.checked) {
+            showToast('you must agree to the guidelines to enter.');
+            return;
+        }
         localStorage.setItem('3am_visited', 'true');
         const overlay = DOM.onboardingOverlay;
         if (!overlay) return;
@@ -592,6 +623,7 @@
             AppState.exitWarn2Shown = false;
             AppState.exitRitualStarted = false;
             AppState.ghostShown = false;
+            AppState.nightWrapShown = false;
             AppState.newReplies.clear();
             AppState.notifications = [];
             AppState.queuedPosts = [];
@@ -599,6 +631,44 @@
             hideNewPostsPill();
             tick();
         }, 4000);
+    }
+
+    function checkNightWrap(now) {
+        if (AppState.isSpoofMode) return;
+        const secsLeft = getSecondsUntilClose(now);
+        // Trigger at 5 minutes left (5:55 AM)
+        if (secsLeft > 0 && secsLeft <= 5 * 60 && !AppState.nightWrapShown) {
+            AppState.nightWrapShown = true;
+            showNightWrap();
+        }
+    }
+
+    function showNightWrap() {
+        const wrapOverlay = document.getElementById('night-wrap-overlay');
+        if (!wrapOverlay) return;
+
+        const postsCountEl = document.getElementById('night-wrap-posts-count');
+        const usersCountEl = document.getElementById('night-wrap-users-count');
+
+        if (postsCountEl) postsCountEl.textContent = AppState.posts.length;
+        if (usersCountEl) {
+            const userCountVal = document.getElementById('user-count-value');
+            usersCountEl.textContent = userCountVal ? userCountVal.textContent : '0';
+        }
+
+        wrapOverlay.hidden = false;
+        requestAnimationFrame(() => wrapOverlay.classList.add('active'));
+
+        const closeBtn = document.getElementById('night-wrap-close');
+        if (closeBtn) {
+            closeBtn.onclick = () => {
+                wrapOverlay.classList.add('fading');
+                setTimeout(() => {
+                    wrapOverlay.hidden = true;
+                    wrapOverlay.classList.remove('active', 'fading');
+                }, 600);
+            };
+        }
     }
 
     // ════════════════════════════════════════════════════════
@@ -865,6 +935,18 @@
                 reportItem.addEventListener('click', () => { closePostMenu(); openReportPicker(postId); });
             }
             dropdown.appendChild(reportItem);
+
+            const blockItem = document.createElement('button');
+            blockItem.className = 'post-menu-item';
+            blockItem.setAttribute('role', 'menuitem');
+            blockItem.textContent = '🚫 block this soul';
+            blockItem.addEventListener('click', () => {
+                closePostMenu();
+                AppState.blockedUsers.add(post.userId);
+                showToast('soul blocked. all thoughts hidden.');
+                renderPosts();
+            });
+            dropdown.appendChild(blockItem);
         }
 
         card.appendChild(dropdown);
@@ -1021,7 +1103,19 @@
         }
     }
 
+    const PROFANITY_LIST = ['abuse', 'slur', 'harassment', 'hate', 'offensiveword'];
+    function containsProfanity(text) {
+        if (!text) return false;
+        const lower = text.toLowerCase();
+        return PROFANITY_LIST.some(word => lower.includes(word));
+    }
+
     async function addPost(content, isAnonymous) {
+        if (containsProfanity(content)) {
+            showToast('thought contains flagged terms. please write with care.');
+            return;
+        }
+
         if (AppState.isPosting) return;
         AppState.isPosting = true;
         DOM.open.postButton.disabled = true;
@@ -1031,6 +1125,10 @@
         emitTypingStop();
         if (AppState.typingStopTimer) clearTimeout(AppState.typingStopTimer);
 
+        const optInChecked = document.getElementById('survivor-check') 
+            ? document.getElementById('survivor-check').checked 
+            : true;
+
         try {
             const res = await fetch('/api/posts', {
                 method: 'POST',
@@ -1039,7 +1137,13 @@
                     'x-spoof-mode': AppState.isSpoofMode,
                     'x-user-token': getUserToken()
                 },
-                body: JSON.stringify({ content, isAnonymous, userId: getUserId(), mood: (AppState.selectedMood && AppState.selectedMood !== '__custom__') ? AppState.selectedMood : null }),
+                body: JSON.stringify({ 
+                    content, 
+                    isAnonymous, 
+                    userId: getUserId(), 
+                    mood: (AppState.selectedMood && AppState.selectedMood !== '__custom__') ? AppState.selectedMood : null,
+                    optInSurvivor: optInChecked
+                }),
                 signal: AbortSignal.timeout(5000)
             });
             if (res.ok) {
@@ -1065,27 +1169,33 @@
         }
     }
 
-    async function addReaction(postId, emoji) {
+    async function markPostAsSeen(postId) {
+        if (AppState.seenPosts.has(postId)) return;
+        AppState.seenPosts.add(postId);
         try {
-            const res = await fetch(`/api/posts/${encodeURIComponent(postId)}/react`, {
+            const res = await fetch(`/api/posts/${encodeURIComponent(postId)}/seen`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'x-spoof-mode': AppState.isSpoofMode,
                     'x-user-token': getUserToken()
                 },
-                body: JSON.stringify({ emoji, userId: getUserId() }),
-                signal: AbortSignal.timeout(5000)
+                body: JSON.stringify({ userId: getUserId() }),
+                signal: AbortSignal.timeout(3000)
             });
             if (res.ok) {
-                safeVibrate(30);
-            } else if (res.status === 429) {
-                showPoeticToast('you already felt that.');
-            } else {
-                const data = await res.json().catch(() => ({}));
-                showToast(data.error?.message || 'could not react');
+                const updatedPost = await res.json();
+                const idx = AppState.posts.findIndex(p => p.id === updatedPost.id);
+                if (idx > -1) {
+                    AppState.posts[idx] = updatedPost;
+                    const card = DOM.open.feed.querySelector(`.post-card[data-id="${postId}"]`);
+                    if (card) {
+                        const lbl = card.querySelector('.seen-count-label');
+                        if (lbl) lbl.textContent = `${updatedPost.seenCount || 0} souls witnessed`;
+                    }
+                }
             }
-        } catch (e) { /* optimistic update already applied */ }
+        } catch (e) { /* silent */ }
     }
 
     async function addReply(postId, content, mood) {
@@ -1410,12 +1520,18 @@
         const userId = getUserId();
         const heartbeat = getHeartbeatStyle(getTrustedTime().time);
         DOM.open.feed.innerHTML = '';
-        const visible = AppState.posts.filter(p => !AppState.hiddenPosts.has(p.id));
+        const visible = AppState.posts.filter(p => !AppState.hiddenPosts.has(p.id) && !AppState.blockedUsers.has(p.userId));
         if (visible.length === 0) {
             DOM.open.emptyFeed.classList.add('active');
         } else {
             DOM.open.emptyFeed.classList.remove('active');
-            visible.forEach(post => DOM.open.feed.appendChild(createPostElement(post, new Date(post.timestamp), userId, heartbeat)));
+            visible.forEach(post => {
+                const element = createPostElement(post, new Date(post.timestamp), userId, heartbeat);
+                DOM.open.feed.appendChild(element);
+                if (post.userId !== userId) {
+                    markPostAsSeen(post.id);
+                }
+            });
         }
     }
 
@@ -1467,14 +1583,22 @@
 
         // Actions
         const actions = document.createElement('div'); actions.className = 'post-actions';
-        CONFIG.REACTIONS.forEach(emoji => {
-            const btn = document.createElement('button'); btn.className = 'reaction-btn'; btn.dataset.emoji = emoji; btn.setAttribute('aria-label', `React with ${emoji}`); btn.title = emoji;
-            const es = document.createElement('span'); es.className = 'emoji'; es.setAttribute('aria-hidden', 'true'); es.textContent = emoji;
-            const cs = document.createElement('span'); cs.className = 'count';
-            const arr = post.reactions[emoji]; const count = Array.isArray(arr) ? arr.length : 0; cs.textContent = count > 0 ? count : '';
-            if (Array.isArray(arr) && arr.includes(userId)) { btn.classList.add('reacted'); btn.setAttribute('aria-pressed', 'true'); } else btn.setAttribute('aria-pressed', 'false');
-            btn.appendChild(es); btn.appendChild(cs); actions.appendChild(btn);
-        });
+        
+        // Seen count indicator (glowing witness orb design)
+        const seenContainer = document.createElement('div');
+        seenContainer.className = 'seen-container';
+        seenContainer.setAttribute('aria-label', `${post.seenCount || 0} souls witnessed`);
+        
+        const seenOrb = document.createElement('span');
+        seenOrb.className = 'seen-orb';
+        
+        const seenCountLabel = document.createElement('span');
+        seenCountLabel.className = 'seen-count-label';
+        seenCountLabel.textContent = `${post.seenCount || 0} witnessed`;
+        
+        seenContainer.appendChild(seenOrb);
+        seenContainer.appendChild(seenCountLabel);
+        actions.appendChild(seenContainer);
 
         const whisperCount = post.replies ? post.replies.length : 0;
         const isWhisperOpen = AppState.openWhisperPostId === post.id;
@@ -1529,21 +1653,6 @@
         const menuBtn = event.target.closest('.post-menu-btn');
         if (!menuBtn) closePostMenu();
 
-        // Reactions
-        const reactionBtn = event.target.closest('.reaction-btn');
-        if (reactionBtn) {
-            const card = reactionBtn.closest('.post-card'); if (!card) return;
-            const postId = card.dataset.id; const emoji = reactionBtn.dataset.emoji; const userId = getUserId();
-            const post = AppState.posts.find(p => p.id === postId);
-            if (post) {
-                const currentlyReacted = Array.isArray(post.reactions[emoji]) && post.reactions[emoji].includes(userId);
-                CONFIG.REACTIONS.forEach(e => { if (Array.isArray(post.reactions[e])) post.reactions[e] = post.reactions[e].filter(id => id !== userId); });
-                if (!currentlyReacted) post.reactions[emoji].push(userId);
-                renderPosts();
-            }
-            addReaction(postId, emoji); return;
-        }
-
         // Whisper toggle
         const whisperToggle = event.target.closest('[data-action="whisper-toggle"]');
         if (whisperToggle) {
@@ -1579,7 +1688,10 @@
                 if (AppState.current !== AppState.OPEN) {
                     switchScreen('open'); renderMoodFilterBar(); loadPosts();
                     setTimeout(() => loadAndShowGhost(), 800);
-                } else { renderOpenScreen(); }
+                } else {
+                    renderOpenScreen();
+                    checkNightWrap(now);
+                }
                 break;
         }
     }
