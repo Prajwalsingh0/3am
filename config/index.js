@@ -24,9 +24,9 @@ const envSchema = Joi.object({
         .default(3000),
 
     // MongoDB Atlas connection string.
-    // Required in production. Optional in development when DEV_OVERRIDE=true.
+    // Required in production. Optional in development (falls back to in-memory).
     MONGODB_URI: _mongoOptional
-        ? Joi.string().uri({ scheme: ['mongodb', 'mongodb+srv'] }).optional()
+        ? Joi.string().uri({ scheme: ['mongodb', 'mongodb+srv'] }).allow('').optional()
         : Joi.string().uri({ scheme: ['mongodb', 'mongodb+srv'] }).required(),
 
     LOG_LEVEL: Joi.string()
