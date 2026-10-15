@@ -37,40 +37,32 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles-polish.css">
     <link rel="manifest" href="manifest.json">
     <script src="/socket.io/socket.io.js" defer></script>
-    <!-- html2canvas for post sharing -->
     <script src="/html2canvas.min.js" defer></script>
 </head>
 
 <body>
 
-    <!-- ═══════════════════════════════════════
-         ONBOARDING OVERLAY (shown on first visit)
-    ════════════════════════════════════════ -->
     <div id="onboarding-overlay" class="onboarding-overlay" role="dialog" aria-modal="true" aria-label="Welcome to The 3AM Channel" hidden>
         <button id="onboarding-skip" class="onboarding-skip" aria-label="Skip introduction">skip</button>
-
         <div class="onboarding-slides" id="onboarding-slides">
-            <!-- Slide 1 -->
             <div class="onboarding-slide" data-slide="0">
                 <div class="onboarding-icon">🌙</div>
                 <h2 class="onboarding-title">welcome to 3am</h2>
                 <p class="onboarding-body">this place only exists between 1:00 AM and 6:00 AM. gone by dawn.</p>
             </div>
-            <!-- Slide 2 -->
             <div class="onboarding-slide" data-slide="1">
                 <div class="onboarding-icon">👁</div>
                 <h2 class="onboarding-title">no names. no history.</h2>
                 <p class="onboarding-body">everything disappears at 6AM. one random opt-in post is kept to haunt the next night.</p>
             </div>
-            <!-- Slide 3 -->
             <div class="onboarding-slide" data-slide="2">
                 <div class="onboarding-icon">🛡️</div>
                 <h2 class="onboarding-title">safe harbor</h2>
                 <p class="onboarding-body">harassment/spam are blocked. you can mute any soul or report posts instantly.</p>
             </div>
-            <!-- Slide 4 -->
             <div class="onboarding-slide" data-slide="3">
                 <div class="onboarding-icon">🤝</div>
                 <h2 class="onboarding-title">safe space agreement</h2>
@@ -81,16 +73,12 @@
                 </div>
             </div>
         </div>
-
-        <!-- Dot indicators -->
         <div class="onboarding-dots" aria-hidden="true">
             <span class="onboarding-dot active" data-dot="0"></span>
             <span class="onboarding-dot" data-dot="1"></span>
             <span class="onboarding-dot" data-dot="2"></span>
             <span class="onboarding-dot" data-dot="3"></span>
         </div>
-
-        <!-- Navigation -->
         <div class="onboarding-nav">
             <button id="onboarding-prev" class="onboarding-arrow" aria-label="Previous slide" hidden>←</button>
             <button id="onboarding-next" class="onboarding-arrow" aria-label="Next slide">→</button>
@@ -98,16 +86,10 @@
         </div>
     </div>
 
-    <!-- Starfield background (canvas, always behind everything) -->
     <canvas id="starfield" class="starfield-canvas" aria-hidden="true"></canvas>
-    <!-- Film grain overlay -->
     <div class="grain-overlay" aria-hidden="true"></div>
 
     <div id="app" role="main">
-
-        <!-- ═══════════════════════════════════════
-             CLOSED SCREEN
-        ════════════════════════════════════════ -->
         <div id="closed-screen" class="screen active" role="region" aria-label="Channel closed">
             <div class="screen-content">
                 <div class="moon-icon" role="img" aria-label="Moon icon" tabindex="0" title="The 3AM Channel">
@@ -141,9 +123,6 @@
             </div>
         </div>
 
-        <!-- ═══════════════════════════════════════
-             OPENING SOON SCREEN
-        ════════════════════════════════════════ -->
         <div id="opening-screen" class="screen" role="region" aria-label="Channel opening soon">
             <div class="screen-content">
                 <div class="opening-icon" aria-hidden="true">
@@ -166,11 +145,7 @@
             </div>
         </div>
 
-        <!-- ═══════════════════════════════════════
-             OPEN SCREEN
-        ════════════════════════════════════════ -->
         <div id="open-screen" class="screen" role="region" aria-label="Channel open">
-
             <header class="app-header">
                 <div class="header-left">
                     <h1 class="app-title small">The 3AM Channel</h1>
@@ -183,7 +158,6 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    <!-- Notification bell -->
                     <button id="notif-bell" class="notif-bell" aria-label="Notifications" aria-haspopup="true" aria-expanded="false">
                         <span class="notif-bell-icon" aria-hidden="true">🔔</span>
                         <span id="notif-badge" class="notif-badge" aria-live="polite" hidden>0</span>
@@ -196,35 +170,18 @@
             </header>
 
             <main class="main-content">
-
-                <!-- Pull-to-refresh indicator (mobile) -->
                 <div id="ptr-indicator" class="ptr-indicator" aria-hidden="true">
                     <span class="ptr-moon">🌙</span>
                     <span id="ptr-label" class="ptr-label">pull to refresh</span>
                 </div>
-
-                <!-- Typing indicator -->
                 <div id="typing-indicator" class="typing-indicator" aria-live="polite" aria-atomic="true" hidden>
                     <span class="typing-dots"><span></span><span></span><span></span></span>
                     <span id="typing-text" class="typing-text">someone is awake and typing...</span>
                 </div>
-
-                <!-- Create Post -->
                 <section class="create-post-section" aria-label="Share a thought">
                     <div class="post-input-wrapper">
-                        <textarea
-                            id="post-input"
-                            placeholder="say what you can only say at 3am..."
-                            rows="3"
-                            aria-label="Post content"
-                            aria-describedby="char-count"
-                        ></textarea>
-
-                        <!-- Mood Picker -->
-                        <div id="mood-picker" class="mood-picker" role="group" aria-label="Pick a mood (optional)">
-                            <!-- Populated by app.js -->
-                        </div>
-
+                        <textarea id="post-input" placeholder="say what you can only say at 3am..." rows="3" aria-label="Post content" aria-describedby="char-count"></textarea>
+                        <div id="mood-picker" class="mood-picker" role="group" aria-label="Pick a mood (optional)"></div>
                         <div class="post-options">
                             <label class="anonymous-toggle">
                                 <input type="checkbox" id="anonymous-check" checked aria-label="Post anonymously">
@@ -247,29 +204,20 @@
                         <p id="posting-as-preview" class="posting-as-preview" aria-live="polite"></p>
                     </div>
                 </section>
-
-                <!-- Feed -->
                 <section class="feed-section" aria-label="Tonight's posts">
                     <div class="feed-header">
                         <h2>Tonight</h2>
                         <span id="post-count" class="post-count" aria-live="polite">0 posts</span>
                     </div>
-
-                    <!-- Mood filter bar -->
                     <div id="mood-filter-bar" class="mood-filter-bar" role="group" aria-label="Filter posts by mood"></div>
-
-                    <!-- "New posts" floating pill -->
                     <div id="new-posts-pill" class="new-posts-pill" aria-live="polite" role="status" hidden>
                         <span id="new-posts-pill-text">↑ new posts</span>
                     </div>
-
                     <div id="feed-loading" class="feed-loading" style="display:none;" aria-label="Loading posts" role="status">
                         <div class="loading-spinner"></div>
                         <span>Loading...</span>
                     </div>
-
                     <div id="feed" class="feed" role="feed" aria-label="Post feed"></div>
-
                     <div id="empty-feed" class="empty-feed" role="status">
                         <div class="empty-icon" aria-hidden="true">
                             <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -280,20 +228,13 @@
                         <p>Be the first to share tonight.</p>
                         <p class="empty-sub">Sometimes the hardest part is starting.</p>
                     </div>
-
-                    <!-- Desktop refresh button (below feed) -->
-                    <button id="desktop-refresh-btn" class="desktop-refresh-btn" aria-label="Refresh feed">
-                        ↻ refresh
-                    </button>
+                    <button id="desktop-refresh-btn" class="desktop-refresh-btn" aria-label="Refresh feed">↻ refresh</button>
                 </section>
             </main>
-
-            <!-- Exit message overlay -->
             <div id="exit-message" class="exit-message" aria-live="polite" role="status">
                 <p class="exit-main">it's gone.</p>
                 <p class="exit-sub">see you at 3.</p>
             </div>
-
             <footer class="app-footer">
                 <div class="time-info">
                     <span class="current-time" id="current-time" aria-live="polite" aria-label="Current time">--:--</span>
@@ -301,10 +242,8 @@
                 </div>
             </footer>
         </div>
+    </div>
 
-    </div><!-- /#app -->
-
-    <!-- Ghost Post overlay -->
     <div id="ghost-overlay" class="ghost-overlay" role="dialog" aria-modal="true" aria-label="A message from last night">
         <div class="ghost-inner">
             <p class="ghost-eyebrow">someone said this once. they're gone now.</p>
@@ -314,7 +253,6 @@
         </div>
     </div>
 
-    <!-- Night Wrap overlay -->
     <div id="night-wrap-overlay" class="night-wrap-overlay" role="dialog" aria-modal="true" aria-label="Night wrap summary" hidden>
         <div class="night-wrap-inner">
             <div class="night-wrap-icon">✨</div>
@@ -325,10 +263,7 @@
         </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-    <!-- Notification drawer -->
     <div id="notif-backdrop" class="notif-backdrop" hidden></div>
     <div id="notif-drawer" class="notif-drawer" role="dialog" aria-label="Notifications" hidden>
         <div class="notif-drawer-header">
@@ -337,8 +272,6 @@
         </div>
         <div id="notif-list" class="notif-list"></div>
     </div>
-
-    <!-- Report picker -->
     <div id="report-backdrop" class="report-backdrop" hidden></div>
     <div id="report-picker" class="report-picker" role="dialog" aria-label="Report post" hidden>
         <div class="report-picker-header">
@@ -348,7 +281,6 @@
         <div id="report-reasons" class="report-reasons"></div>
     </div>
 
-    <!-- Dev config must load before app.js -->
     <script src="/dev-config.js"></script>
     <script src="app.js" defer></script>
 </body>
